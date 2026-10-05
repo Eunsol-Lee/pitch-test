@@ -60,6 +60,11 @@
   input[type=range] { width:100%; }
   .adj { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .adj button { padding:10px 4px; font-size:15px; }
+  .instGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:10px; }
+  .instGrid button { text-align:left; padding:10px 12px; }
+  .instGrid button b { display:block; font-size:16px; }
+  .instGrid button small { display:block; color:var(--sub); font-size:12px; margin-top:2px; line-height:1.4; }
+  .instGrid button.on { border:2px solid var(--accent); background:#eef3fc; padding:9px 11px; }
 </style>
 </head>
 <body>
@@ -77,12 +82,9 @@
     </ul>
   </div>
   <div class="card">
-    <b>악기</b>
-    <div class="seg row" id="segInst" style="margin-top:8px">
-      <button data-v="mix" class="on">🎲 섞어서</button><button data-v="piano">🎹 피아노</button><button data-v="clarinet">클라리넷</button>
-      <button data-v="violin">🎻 바이올린</button><button data-v="flute">플루트</button><button data-v="trumpet">🎺 트럼펫</button>
-      <button data-v="guitar">🎸 기타</button><button data-v="sine">〰️ 순음</button>
-    </div>
+    <b>악기 고르기</b>
+    <div class="sub">한 악기로 정해서 연습하면 그 악기 기록이 따로 쌓여서 나아지는 게 보여요.</div>
+    <div class="instGrid" id="instGrid"></div>
     <div class="row" style="margin-top:14px"><b>① 문제 수</b>
       <span class="seg row" id="segCount"><button data-v="24">24문제</button><button data-v="36" class="on">36문제</button></span></div>
   </div>
@@ -121,7 +123,7 @@
   <div class="card"><div class="bars" id="bars"></div></div>
   <div class="verdict" id="verdict"></div>
   <div id="instWrap"><h2>악기별</h2><div class="card" style="padding:8px"><table id="instTbl"></table></div></div>
-  <div id="pastWrap" class="hidden"><h2>지난 기록과 비교</h2><div class="card" style="padding:8px"><table id="pastTbl"></table></div></div>
+  <div id="pastWrap" class="hidden"><h2 class="pastH"></h2><div class="card" style="padding:8px"><table id="pastTbl"></table></div></div>
   <h2>문제별 기록</h2>
   <div class="card" style="padding:8px"><table id="tbl"></table></div>
   <div class="row" style="margin-top:16px">
@@ -175,7 +177,7 @@
   <p class="sub">센트: 반음 = 100센트, 온음 = 200센트. +는 정확한 음보다 높게, −는 낮게 맞춘 거예요.</p>
   <div class="verdict" id="tVerdict"></div>
   <div id="tInstWrap"><h2>악기별</h2><div class="card" style="padding:8px"><table id="tInstTbl"></table></div></div>
-  <div id="tPastWrap" class="hidden"><h2>지난 기록과 비교</h2><div class="card" style="padding:8px"><table id="tPastTbl"></table></div></div>
+  <div id="tPastWrap" class="hidden"><h2 class="pastH"></h2><div class="card" style="padding:8px"><table id="tPastTbl"></table></div></div>
   <h2>음별 기록</h2>
   <div class="card" style="padding:8px"><table id="tTbl"></table></div>
   <div class="row" style="margin-top:16px">
@@ -202,7 +204,7 @@ const INST = {
 };
 const MIX = ['piano','clarinet','violin','flute','trumpet','guitar'];
 const $ = id => document.getElementById(id);
-const show = id => { ['intro','quiz','result','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
+const show = id => { if (id === 'intro') renderInstGrid(); ['intro','quiz','result','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
 const rand = n => Math.floor(Math.random() * n);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const noteName = midi => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
@@ -211,7 +213,7 @@ const instLabel = k => `${INST[k].icon} ${INST[k].name}`;
 const offsetOf = (ans, pc) => { let d = ((ans - pc) % 12 + 12) % 12; return d > 6 ? d - 12 : d; };
 const sgn = x => (x > 0 ? '+' : '') + x;
 
-let settings = { count: 36, inst: 'mix' };
+let settings = { count: 36, inst: localStorage.getItem('pitchInst') || 'piano' };
 document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   e.stopPropagation();
@@ -339,7 +341,9 @@ function answer(pc) {
     st.textContent = `✗ ${NAMES[pc]} → 정답은 ${NAMES[real]} (${Math.abs(d)}반음 ${d > 0 ? '높게' : '낮게'} 답함)`;
   }
   renderLog();
-  qi++; setTimeout(nextQuestion, 1800);
+  // 틀리면 방금 그 음을 정답 이름과 함께 한 번 더 들려줌
+  if (d !== 0) playNote(q.inst, q.midi, 0, ac().currentTime + .25, 1.6);
+  qi++; setTimeout(nextQuestion, d === 0 ? 1600 : 2900);
 }
 function renderLog() {
   if (!answers.length) { $('liveScore').textContent = ''; $('log').innerHTML = '<span class="sub">첫 문제를 풀면 여기에 쌓여요</span>'; return; }
@@ -360,12 +364,13 @@ $('btnQuit').onclick = () => { clearInterval(timerId); setKeys(false); finishQui
 
 function pastTable(key, now, cols) {
   const past = JSON.parse(localStorage.getItem(key) || '[]');
-  localStorage.setItem(key, JSON.stringify([...past, now].slice(-20)));
-  if (!past.length) return '';
+  localStorage.setItem(key, JSON.stringify([...past, now].slice(-200)));
+  const same = past.filter(r => r.inst === now.inst);
+  if (!same.length) return '';
   const instName = k => k === 'mix' ? '섞어서' : INST[k]?.name || '';
   return `<tr><th>날짜</th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr>` +
-    [...past.slice(-5), now].reverse().map(r => `<tr${r === now ? ' style="font-weight:700"' : ''}>
-      <td>${r === now ? '지금' : new Date(r.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} ${instName(r.inst)}</td>
+    [...same.slice(-9), now].reverse().map(r => `<tr${r === now ? ' style="font-weight:700"' : ''}>
+      <td>${r === now ? '지금' : new Date(r.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
       ${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('');
 }
 
@@ -541,6 +546,20 @@ async function copy(text) {
   catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   $('copied').textContent = '복사됐어요. 카톡 등에 붙여넣어 공유하세요.';
 }
+function renderInstGrid() {
+  const h1 = JSON.parse(localStorage.getItem('pitchHistory') || '[]'), h2 = JSON.parse(localStorage.getItem('tuneHistory') || '[]');
+  $('instGrid').innerHTML = [...MIX, 'sine', 'mix'].map(k => {
+    const a = h1.filter(r => r.inst === k), b = h2.filter(r => r.inst === k), la = a[a.length - 1], lb = b[b.length - 1];
+    const lines = [la ? `① 최근 ${Math.round(la.exact / la.n * 100)}% (${a.length}회)` : '', lb ? `② 최근 ${sgn(Math.round(lb.mean))}센트 (${b.length}회)` : ''].filter(Boolean);
+    return `<button data-v="${k}" class="${k === settings.inst ? 'on' : ''}"><b>${k === 'mix' ? '🎲 섞어서' : instLabel(k)}</b><small>${lines.join('<br>') || '아직 기록 없음'}</small></button>`;
+  }).join('');
+  document.querySelectorAll('.pastH').forEach(h => h.textContent = `${settings.inst === 'mix' ? '🎲 섞어서' : instLabel(settings.inst)} 지난 기록`);
+}
+$('instGrid').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  settings.inst = b.dataset.v; localStorage.setItem('pitchInst', settings.inst); renderInstGrid();
+};
+renderInstGrid();
 $('btnStart').onclick = startQuiz;
 $('btnTune').onclick = startTune;
 $('btnCopy1').onclick = () => copy(summary1);
