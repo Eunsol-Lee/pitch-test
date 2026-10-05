@@ -101,7 +101,8 @@
       <span class="seg row" id="segKey" style="margin-top:8px"><button data-v="C">실제 소리 (C)</button><button data-v="Bb">B♭ 악기 악보</button><button data-v="A">A 악기 악보</button></span></div>
   </div>
   <button class="mode" id="btnStart"><b>① 음 이름 맞히기</b><span>음을 듣고 도레미로 답해요. 답하면 바로 정답이 나와요. 24문제 약 4분 · 36문제 약 6분.</span></button>
-  <button class="mode" id="btnTune"><b>② 음 높이 정확히 맞추기</b><span>틀어진 음을 온음·반음·미세 조절로 정확한 높이에 맞춰요. 12음 전부(흰 건반 + 검은 건반), 약 5분.</span></button>
+  <button class="mode" id="btnEar"><b>② 귀 맞추기 연습</b><span>이름을 보고 머릿속으로 먼저 음을 떠올린 다음, 정확한 음을 들어보고 비교해요. 12음 전부, 약 5분. 매일 연습용.</span></button>
+  <button class="mode" id="btnTune"><b>③ 기준음 측정</b><span>틀어진 음을 귀로 정확한 높이에 맞춰서, 내 기준이 몇 센트 밀렸는지 재요. 연습 효과 점검용으로 가끔(일주일에 한 번 정도).</span></button>
   <p class="sub" id="loadMsg"></p>
 </section>
 
@@ -145,9 +146,55 @@
   </div>
 </section>
 
-<!-- ② 음 높이 맞추기 -->
+<!-- ② 귀 맞추기 연습 -->
+<section id="ear" class="hidden">
+  <div class="row" style="justify-content:space-between"><b id="eNum">1 / 12</b><span class="sub">② 귀 맞추기 연습</span></div>
+  <div class="progress"><div id="eBar"></div></div>
+  <div class="card" style="text-align:center">
+    <div class="inst" id="eInst"></div>
+    <div style="font-size:40px; font-weight:700; margin:4px 0" id="eTarget">라</div>
+    <div class="trans" id="eTrans"></div>
+    <div class="mini" id="eMini"></div>
+    <div class="sub" id="eMiniLbl" style="margin-bottom:6px"></div>
+    <div class="status" id="eStatus"></div>
+    <div id="eBefore"><button class="primary big" id="eListen">▶ 들어보기</button></div>
+    <div id="eAfter" class="hidden">
+      <div class="sub" style="margin-bottom:8px">내가 떠올린 음과 비교하면?</div>
+      <div class="adj">
+        <button data-r="hi">⬆️ 내가 높았어</button><button data-r="ok">🎯 딱 맞았어</button><button data-r="lo">⬇️ 내가 낮았어</button>
+      </div>
+      <div class="row" style="justify-content:center; margin-top:12px"><button id="eAgain">🔁 다시 듣기</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><b>지금까지</b><span id="eLive" class="sub"></span></div>
+    <div class="log" id="eLog"></div>
+  </div>
+  <div class="row" style="justify-content:center"><button id="eQuit" class="sub">그만하고 결과 보기</button></div>
+</section>
+
+<!-- ② 결과 -->
+<section id="earResult" class="hidden">
+  <h1>② 귀 맞추기 연습 결과</h1>
+  <div class="stat">
+    <div>🎯 딱 맞음<b id="erOk"></b></div>
+    <div>⬆️ 내가 높았음<b id="erHi"></b></div>
+    <div>⬇️ 내가 낮았음<b id="erLo"></b></div>
+  </div>
+  <div class="verdict" id="eVerdict" style="margin-top:14px"></div>
+  <div id="ePastWrap" class="hidden"><h2 class="pastH"></h2><div class="card" style="padding:8px"><table id="ePastTbl"></table></div></div>
+  <h2>음별 기록</h2>
+  <div class="card" style="padding:8px"><table id="eTbl"></table></div>
+  <div class="row" style="margin-top:16px">
+    <button class="primary" id="btnEarAgain">한 번 더</button>
+    <button id="btnCopy3">결과 복사</button>
+    <button class="toIntro">처음으로</button>
+  </div>
+</section>
+
+<!-- ③ 기준음 측정 -->
 <section id="tune" class="hidden">
-  <div class="row" style="justify-content:space-between"><b id="tNum">1 / 12</b><span class="sub">② 음 높이 맞추기</span></div>
+  <div class="row" style="justify-content:space-between"><b id="tNum">1 / 12</b><span class="sub">③ 기준음 측정</span></div>
   <div class="progress"><div id="tBar"></div></div>
   <div class="card" style="text-align:center">
     <div class="inst" id="tInst"></div>
@@ -182,9 +229,9 @@
   <div class="row" style="justify-content:center"><button id="tQuit" class="sub">그만하고 결과 보기</button></div>
 </section>
 
-<!-- ② 결과 -->
+<!-- ③ 결과 -->
 <section id="tuneResult" class="hidden">
-  <h1>② 음 높이 맞추기 결과</h1>
+  <h1>③ 기준음 측정 결과</h1>
   <div class="stat">
     <div>평균 어긋남<b id="trMean"></b></div>
     <div>들쭉날쭉한 정도<b id="trSd"></b></div>
@@ -222,7 +269,7 @@ const INST = {
 };
 const MIX = ['piano','clarinet','violin','flute','trumpet','guitar'];
 const $ = id => document.getElementById(id);
-const show = id => { if (id === 'intro') renderInstGrid(); ['intro','quiz','result','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
+const show = id => { if (id === 'intro') renderInstGrid(); ['intro','quiz','result','ear','earResult','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
 const rand = n => Math.floor(Math.random() * n);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const noteName = midi => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
@@ -482,7 +529,78 @@ function finishQuiz() {
     `문제별: ${answers.map(a => `${INST[a.inst].name} ${NAMES[wpc(a.midi)]}→${NAMES[a.ans]}(${a.sec.toFixed(1)}s)`).join(', ')}`;
 }
 
-// ---------- ② 음 높이 맞추기 ----------
+// ---------- ② 귀 맞추기 연습 ----------
+// 이름을 보고 먼저 떠올림 → 정확한 음을 듣고 → 스스로 비교. 머릿속 기준을 실제 음에 다시 맞추는 연습
+const RATE = { ok: '🎯 딱 맞음', hi: '⬆️ 내가 높았음', lo: '⬇️ 내가 낮았음' };
+let eTrials = [], ei = 0, eResults = [], eListens = 0;
+async function startEar() {
+  ac();
+  const pcs = shuffle([...Array(12).keys()]), insts = pickInsts(12);
+  eTrials = pcs.map((pc, i) => ({ inst: insts[i], midi: pickMidi(insts[i], pc, 53, 81) }));
+  await preload(eTrials.map(t => [t.inst, t.midi]));
+  ei = 0; eResults = []; renderEarLog(); show('ear'); nextEar();
+}
+function nextEar() {
+  if (ei >= eTrials.length) return finishEar();
+  const t = eTrials[ei];
+  $('eNum').textContent = `${ei + 1} / ${eTrials.length}`;
+  $('eBar').style.width = `${ei / eTrials.length * 100}%`;
+  $('eInst').textContent = instLabel(t.inst);
+  $('eTarget').textContent = NAMES[wpc(t.midi)];
+  $('eTrans').innerHTML = transLine(t.midi);
+  miniKbd($('eMini'), t.midi);
+  $('eMiniLbl').textContent = `🎹 피아노에서 이 음: ${LETTERS[t.midi % 12].split('/').map(l => l + (Math.floor(t.midi / 12) - 1)).join(' / ')}`;
+  $('eStatus').className = 'status'; $('eStatus').textContent = '🤔 머릿속으로 먼저 이 음을 떠올려 보세요 (흥얼거려도 좋아요)';
+  $('eBefore').classList.remove('hidden'); $('eAfter').classList.add('hidden');
+  eListens = 0;
+  playMask(ac().currentTime + .1); // 앞 음 기억 지우기
+}
+function earPlay() { const t = eTrials[ei]; eListens++; playNote(t.inst, t.midi, 0, ac().currentTime + .05, 2.2); }
+$('eListen').onclick = () => {
+  earPlay();
+  $('eStatus').textContent = '👂 이게 정확한 음이에요';
+  $('eBefore').classList.add('hidden'); $('eAfter').classList.remove('hidden');
+};
+$('eAgain').onclick = earPlay;
+document.querySelectorAll('#ear [data-r]').forEach(b => b.onclick = () => {
+  eResults.push({ ...eTrials[ei], r: b.dataset.r, listens: eListens });
+  renderEarLog(); ei++; nextEar();
+});
+$('eQuit').onclick = () => finishEar();
+function renderEarLog() {
+  if (!eResults.length) { $('eLive').textContent = ''; $('eLog').innerHTML = '<span class="sub">첫 음을 해보면 여기에 쌓여요</span>'; return; }
+  const c = k => eResults.filter(x => x.r === k).length;
+  $('eLive').textContent = `🎯${c('ok')} ⬆️${c('hi')} ⬇️${c('lo')}`;
+  $('eLog').innerHTML = eResults.map((x, i) => `<div><span>#${i + 1} ${INST[x.inst].icon} <b>${NAMES[wpc(x.midi)]}</b></span>
+    <span class="${x.r === 'ok' ? 'good' : 'off'}">${RATE[x.r]}</span></div>`).reverse().join('');
+}
+let summary3 = '';
+function finishEar() {
+  show('earResult');
+  const n = eResults.length;
+  if (!n) { $('eVerdict').textContent = '아직 해본 음이 없어요.'; return; }
+  const c = k => eResults.filter(x => x.r === k).length, ok = c('ok'), hi = c('hi'), lo = c('lo');
+  const pct = x => `${x} (${Math.round(x / n * 100)}%)`;
+  $('erOk').textContent = pct(ok); $('erHi').textContent = pct(hi); $('erLo').textContent = pct(lo);
+  let v;
+  if (ok / n >= .75) v = '🎯 <b>머릿속 음이 실제 음과 잘 맞아요.</b>';
+  else if (lo >= hi * 2 && lo >= 3) v = '⬇️ <b>떠올린 음이 실제보다 낮은 경우가 많아요.</b> 머릿속 기준이 낮아서, 실제 음이 높게 들리는 것과 같은 이유예요. 연습할수록 "내가 낮았음"이 줄어들면 귀가 맞춰지고 있는 거예요.';
+  else if (hi >= lo * 2 && hi >= 3) v = '⬆️ <b>떠올린 음이 실제보다 높은 경우가 많아요.</b> 머릿속 기준이 높은 편이에요. 연습할수록 "내가 높았음"이 줄어들면 귀가 맞춰지고 있는 거예요.';
+  else v = '🙂 <b>높았다 낮았다 섞여 있어요.</b> 한쪽으로 밀린 건 아니고, 음마다 정확도가 아직 흔들리는 단계예요. 매일 한 번씩 하면 딱 맞음이 늘어나요.';
+  v += '<br><span class="sub">이 연습은 스스로 판단한 기록이에요. 정확한 숫자는 가끔 ③ 기준음 측정으로 확인하세요.</span>';
+  $('eVerdict').innerHTML = v;
+  const now = { at: Date.now(), n, ok, hi, lo, inst: settings.inst, key: settings.key };
+  const pt = pastTable('earHistory', now, [
+    ['🎯 딱 맞음', r => Math.round(r.ok / r.n * 100) + '%'], ['⬆️ 높았음', r => r.hi], ['⬇️ 낮았음', r => r.lo]]);
+  $('ePastWrap').classList.toggle('hidden', !pt); $('ePastTbl').innerHTML = pt;
+  $('eTbl').innerHTML = '<tr><th>#</th><th>악기</th><th>음</th><th>비교</th><th>들은 횟수</th></tr>' + eResults.map((x, i) =>
+    `<tr><td>${i + 1}</td><td>${INST[x.inst].icon}</td><td>${asked(x.midi)}</td><td class="${x.r === 'ok' ? 'good' : 'off'}">${RATE[x.r]}</td><td>${x.listens}</td></tr>`).join('');
+  summary3 = `[귀 맞추기 연습] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}${keyName()}\n` +
+    `딱 맞음 ${ok}/${n}, 내가 높았음 ${hi}, 내가 낮았음 ${lo}\n` +
+    `음별: ${eResults.map(x => `${INST[x.inst].name} ${NAMES[wpc(x.midi)]} ${{ ok: '맞음', hi: '높았음', lo: '낮았음' }[x.r]}`).join(', ')}`;
+}
+
+// ---------- ③ 기준음 측정 ----------
 let tTrials = [], ti = 0, hidden = 0, tResults = [];
 const errText = c => {
   const a = Math.abs(c), dir = c > 0 ? '높게' : '낮게';
@@ -579,7 +697,7 @@ function finishTune() {
     `<tr><td>${i + 1}</td><td>${INST[r.inst].icon}</td><td>${asked(r.midi)}</td>
      <td class="${Math.abs(r.cents) < 30 ? 'good' : 'off'}">${sgn(Math.round(r.cents))}센트</td><td>${errText(r.cents)}</td></tr>`).join('');
 
-  summary2 = `[음 높이 맞추기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}${keyName()}\n` +
+  summary2 = `[기준음 측정] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}${keyName()}\n` +
     `평균 ${sgn(Math.round(mean))}센트, 들쭉날쭉 ±${Math.round(sd)}센트, ±30센트 안 ${inside}/${n}\n` +
     `음별: ${tResults.map(r => `${INST[r.inst].name} ${NAMES[wpc(r.midi)]} ${sgn(Math.round(r.cents))}`).join(', ')}`;
 }
@@ -591,10 +709,13 @@ async function copy(text) {
   $('copied').textContent = '복사됐어요. 카톡 등에 붙여넣어 공유하세요.';
 }
 function renderInstGrid() {
-  const h1 = JSON.parse(localStorage.getItem('pitchHistory') || '[]'), h2 = JSON.parse(localStorage.getItem('tuneHistory') || '[]');
+  const load = k => JSON.parse(localStorage.getItem(k) || '[]');
+  const h1 = load('pitchHistory'), h2 = load('tuneHistory'), h3 = load('earHistory');
   $('instGrid').innerHTML = [...MIX, 'sine', 'mix'].map(k => {
-    const a = h1.filter(r => r.inst === k && (r.key || 'C') === settings.key), b = h2.filter(r => r.inst === k && (r.key || 'C') === settings.key), la = a[a.length - 1], lb = b[b.length - 1];
-    const lines = [la ? `① 최근 ${Math.round(la.exact / la.n * 100)}% (${a.length}회)` : '', lb ? `② 최근 ${sgn(Math.round(lb.mean))}센트 (${b.length}회)` : ''].filter(Boolean);
+    const mine = h => h.filter(r => r.inst === k && (r.key || 'C') === settings.key);
+    const a = mine(h1), b = mine(h2), e = mine(h3), la = a[a.length - 1], lb = b[b.length - 1], le = e[e.length - 1];
+    const lines = [la ? `① 최근 ${Math.round(la.exact / la.n * 100)}% (${a.length}회)` : '', le ? `② 최근 딱 맞음 ${Math.round(le.ok / le.n * 100)}% (${e.length}회)` : '',
+      lb ? `③ 최근 ${sgn(Math.round(lb.mean))}센트 (${b.length}회)` : ''].filter(Boolean);
     return `<button data-v="${k}" class="${k === settings.inst ? 'on' : ''}"><b>${k === 'mix' ? '🎲 섞어서' : instLabel(k)}</b><small>${lines.join('<br>') || '아직 기록 없음'}</small></button>`;
   }).join('');
   document.querySelectorAll('.pastH').forEach(h => h.textContent = `${settings.inst === 'mix' ? '🎲 섞어서' : instLabel(settings.inst)}${keyName()} 지난 기록`);
@@ -607,6 +728,9 @@ $('instGrid').onclick = e => {
 renderInstGrid();
 $('btnStart').onclick = startQuiz;
 $('btnTune').onclick = startTune;
+$('btnEar').onclick = startEar;
+$('btnEarAgain').onclick = startEar;
+$('btnCopy3').onclick = () => copy(summary3);
 $('btnCopy1').onclick = () => copy(summary1);
 $('btnCopy2').onclick = () => copy(summary2);
 document.querySelectorAll('.toIntro').forEach(b => b.onclick = () => show('intro'));
