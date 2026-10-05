@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>음감 테스트 · 절대음감 셀프 체크</title>
-<meta name="description" content="기준음 없이 음 이름 맞히기 + 내 귀의 기준음 찾기. 5분이면 끝나요.">
+<meta name="description" content="여러 악기 소리로 음 이름 맞히기 + 음 높이 정확히 맞추기. 절대음감 셀프 체크.">
 <meta property="og:title" content="🎵 음감 테스트">
-<meta property="og:description" content="절대음감이 있는지, 음이 어떻게 들리는지 5분 만에 체크해 보세요.">
+<meta property="og:description" content="절대음감이 있는지, 음이 어떻게 들리는지 여러 악기 소리로 체크해 보세요.">
 <style>
   :root { --bg:#faf8f5; --card:#fff; --ink:#222; --sub:#777; --accent:#3b6fd8; --ok:#2e9e5b; --warn:#d8833b; --line:#e5e1da; }
   * { box-sizing:border-box; }
@@ -18,20 +18,31 @@
   .sub { color:var(--sub); font-size:14px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0; }
   .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  button { font:inherit; cursor:pointer; border-radius:10px; border:1px solid var(--line); background:#fff; padding:10px 16px; }
+  button { font:inherit; cursor:pointer; border-radius:10px; border:1px solid var(--line); background:#fff; padding:10px 14px; color:var(--ink); }
   button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
   button:disabled { opacity:.4; cursor:default; }
+  .seg button { padding:8px 12px; }
   .seg button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .hidden { display:none !important; }
-  .big { font-size:20px; padding:14px 22px; }
-  .progress { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin:8px 0 16px; }
+  .big { font-size:18px; padding:14px 20px; }
+  .mode { display:block; width:100%; text-align:left; margin:10px 0; padding:16px; }
+  .mode b { font-size:18px; display:block; margin-bottom:4px; }
+  .mode span { color:var(--sub); font-size:14px; }
+  .progress { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin:8px 0 12px; }
   .progress > div { height:100%; background:var(--accent); width:0; transition:width .3s; }
-  .status { text-align:center; font-size:16px; min-height:26px; color:var(--sub); margin:12px 0; }
-  .kbd { position:relative; height:190px; margin:18px auto 8px; max-width:520px; user-select:none; }
+  .inst { text-align:center; font-size:15px; color:var(--sub); }
+  .status { text-align:center; font-size:16px; min-height:28px; color:var(--sub); margin:10px 0; }
+  .status.ok { color:var(--ok); font-weight:700; font-size:20px; }
+  .status.ng { color:var(--warn); font-weight:700; font-size:20px; }
+  .kbd { position:relative; height:190px; margin:14px auto 8px; max-width:520px; user-select:none; }
   .kbd button { position:absolute; padding:0; border-radius:0 0 10px 10px; font-size:18px; font-weight:600; display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px; }
   .kbd .w { top:0; height:190px; width:calc(100%/7 - 4px); background:#fff; border:1px solid #bbb; }
   .kbd .b { top:0; height:115px; width:calc(100%/7*0.62); background:#222; color:#fff; border:1px solid #000; z-index:2; font-size:16px; }
-  .kbd button:not(:disabled):active { filter:brightness(.85); }
+  .kbd button.right { background:var(--ok) !important; color:#fff !important; opacity:1 !important; }
+  .kbd button.wrong { background:var(--warn) !important; color:#fff !important; opacity:1 !important; }
+  .log { max-height:260px; overflow-y:auto; margin-top:8px; }
+  .log div { display:flex; justify-content:space-between; gap:8px; padding:6px 2px; border-bottom:1px solid var(--line); font-size:14px; }
+  .log div:first-child { background:#f6f3ee; border-radius:6px; padding:6px; }
   .bars { display:flex; align-items:flex-end; gap:4px; height:140px; margin-top:8px; }
   .bar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
   .bar .fill { width:100%; background:#c9d4ea; border-radius:4px 4px 0 0; min-height:2px; }
@@ -47,6 +58,8 @@
   .good { color:var(--ok); font-weight:600; }
   .off { color:var(--warn); }
   input[type=range] { width:100%; }
+  .adj { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .adj button { padding:10px 4px; font-size:15px; }
 </style>
 </head>
 <body>
@@ -55,44 +68,49 @@
 <!-- 시작 화면 -->
 <section id="intro">
   <h1>🎵 음감 테스트</h1>
-  <p class="sub">기준음 없이 음 하나를 듣고 이름을 맞혀요. 문제마다 앞에 소음처럼 아무 음들이 섞여 나와서 앞 문제 음으로 짐작하는 걸 막아요.</p>
+  <p class="sub">기준음 없이 여러 악기 소리를 듣고, 음 이름을 맞히거나 음 높이를 정확히 맞춰 봐요. 문제마다 앞에 아무 음들이 섞여 나와서 앞 문제 음으로 짐작하는 걸 막아요.</p>
   <div class="card">
-    <b>방법</b>
-    <ul>
-      <li><b>피아노 기준 이름</b>으로, 들리는 대로 바로 답하세요. 오래 고민하지 않는 게 포인트예요 (3초 안쪽).</li>
-      <li>검은 건반은 <b>디</b>(도♯) · <b>메</b>(미♭) · <b>피</b>(파♯) · <b>로</b>(라♭) · <b>세</b>(시♭). 이름이 낯설면 건반 위치로 누르면 돼요.</li>
-      <li>옥타브는 상관없어요. 음 이름만 맞히면 돼요.</li>
-      <li>다시 듣기는 문제당 2번까지.</li>
-      <li>조용한 곳에서 이어폰이나 스피커로 하세요.</li>
+    <ul style="margin:0; padding-left:20px">
+      <li><b>피아노 기준 이름</b>(실제 소리 이름)으로 답하세요. 클라리넷·트럼펫처럼 악보 이름이 다른 악기라도 실제 소리 기준이에요.</li>
+      <li>검은 건반: <b>디</b>(도♯) · <b>메</b>(미♭) · <b>피</b>(파♯) · <b>로</b>(라♭) · <b>세</b>(시♭). 이름이 낯설면 건반 위치로 누르면 돼요.</li>
+      <li>조용한 곳에서 이어폰으로. 아이폰은 <b>무음 모드를 꺼야</b> 소리가 나요.</li>
     </ul>
   </div>
   <div class="card">
-    <div class="row" style="margin-bottom:12px"><b style="width:70px">문제 수</b>
-      <span class="seg row" id="segCount"><button data-v="24">24개 (~4분)</button><button data-v="36" class="on">36개 (~6분)</button></span></div>
-    <div class="row"><b style="width:70px">음색</b>
-      <span class="seg row" id="segTimbre"><button data-v="piano" class="on">피아노</button><button data-v="clarinet">클라리넷 느낌</button><button data-v="sine">순음</button></span></div>
+    <b>악기</b>
+    <div class="seg row" id="segInst" style="margin-top:8px">
+      <button data-v="mix" class="on">🎲 섞어서</button><button data-v="piano">🎹 피아노</button><button data-v="clarinet">클라리넷</button>
+      <button data-v="violin">🎻 바이올린</button><button data-v="flute">플루트</button><button data-v="trumpet">🎺 트럼펫</button>
+      <button data-v="guitar">🎸 기타</button><button data-v="sine">〰️ 순음</button>
+    </div>
+    <div class="row" style="margin-top:14px"><b>① 문제 수</b>
+      <span class="seg row" id="segCount"><button data-v="24">24문제</button><button data-v="36" class="on">36문제</button></span></div>
   </div>
-  <div class="row">
-    <button class="primary big" id="btnStart">1부: 음 이름 맞히기 시작</button>
-    <button class="big" id="btnTuneOnly">2부만: 기준음 찾기</button>
-  </div>
+  <button class="mode" id="btnStart"><b>① 음 이름 맞히기</b><span>음을 듣고 도레미로 답해요. 답하면 바로 정답이 나와요. 24문제 약 4분 · 36문제 약 6분.</span></button>
+  <button class="mode" id="btnTune"><b>② 음 높이 정확히 맞추기</b><span>틀어진 음을 온음·반음·미세 조절로 정확한 높이에 맞춰요. 12음 전부(흰 건반 + 검은 건반), 약 5분.</span></button>
+  <p class="sub" id="loadMsg"></p>
 </section>
 
-<!-- 1부: 퀴즈 -->
+<!-- ① 퀴즈 -->
 <section id="quiz" class="hidden">
   <div class="row" style="justify-content:space-between"><b id="qNum">1 / 36</b><span class="sub" id="qTimer"></span></div>
   <div class="progress"><div id="qBar"></div></div>
+  <div class="inst" id="qInst"></div>
   <div class="status" id="qStatus">준비…</div>
   <div class="kbd" id="kbd"></div>
   <div class="row" style="justify-content:center">
     <button id="btnReplay">🔁 다시 듣기 (<span id="replayLeft">2</span>)</button>
     <button id="btnQuit" class="sub">그만하고 결과 보기</button>
   </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><b>지금까지</b><span id="liveScore" class="sub"></span></div>
+    <div class="log" id="log"></div>
+  </div>
 </section>
 
-<!-- 1부 결과 -->
+<!-- ① 결과 -->
 <section id="result" class="hidden">
-  <h1>1부 결과</h1>
+  <h1>① 음 이름 맞히기 결과</h1>
   <div class="stat">
     <div>정확히 맞춤<b id="rExact"></b></div>
     <div>반음 차이까지<b id="rNear"></b></div>
@@ -102,59 +120,103 @@
   <p class="sub">가운데 초록 = 정답. 오른쪽(+)은 실제보다 높게, 왼쪽(−)은 낮게 답한 경우예요.</p>
   <div class="card"><div class="bars" id="bars"></div></div>
   <div class="verdict" id="verdict"></div>
+  <div id="instWrap"><h2>악기별</h2><div class="card" style="padding:8px"><table id="instTbl"></table></div></div>
+  <div id="pastWrap" class="hidden"><h2>지난 기록과 비교</h2><div class="card" style="padding:8px"><table id="pastTbl"></table></div></div>
   <h2>문제별 기록</h2>
   <div class="card" style="padding:8px"><table id="tbl"></table></div>
   <div class="row" style="margin-top:16px">
-    <button class="primary big" id="btnToTune">2부: 기준음 찾기 →</button>
-    <button id="btnCopy1">결과 복사</button>
-    <button id="btnAgain">처음으로</button>
+    <button class="primary" id="btnCopy1">결과 복사</button>
+    <button class="toIntro">처음으로</button>
   </div>
 </section>
 
-<!-- 2부: 기준음 찾기 -->
+<!-- ② 음 높이 맞추기 -->
 <section id="tune" class="hidden">
-  <h1>2부: 기준음 찾기</h1>
-  <p class="sub">음 높이를 조절해서 <b>내 귀에 딱 그 음으로 들리는 위치</b>를 찾아요. 시작 높이는 매번 무작위로 틀어져 있고, 슬라이더 위치도 의미 없어요. 귀로만 맞추세요.</p>
+  <div class="row" style="justify-content:space-between"><b id="tNum">1 / 12</b><span class="sub">② 음 높이 맞추기</span></div>
+  <div class="progress"><div id="tBar"></div></div>
   <div class="card" style="text-align:center">
-    <div class="sub" id="tNum">1 / 3</div>
-    <div style="font-size:36px; font-weight:700; margin:8px 0" id="tTarget">라</div>
-    <div class="sub">이 음이 정확히 위 이름으로 들릴 때까지 조절하세요</div>
-    <input type="range" id="tSlider" min="-400" max="400" step="1" value="0" style="margin:22px 0 12px">
-    <div class="row" style="justify-content:center">
-      <button data-d="-50">⏬ 많이 낮게</button><button data-d="-10">🔽 조금 낮게</button>
-      <button data-d="10">🔼 조금 높게</button><button data-d="50">⏫ 많이 높게</button>
+    <div class="inst" id="tInst"></div>
+    <div style="font-size:40px; font-weight:700; margin:4px 0" id="tTarget">라</div>
+    <div id="tAdjust">
+      <div class="sub">이 음이 정확히 위 이름으로 들릴 때까지 조절하세요</div>
+      <input type="range" id="tSlider" min="-700" max="700" step="1" value="0" style="margin:18px 0 10px">
+      <div class="adj">
+        <button data-d="200">⏫ 온음 위</button><button data-d="100">🔼 반음 위</button><button data-d="10">↑ 조금 위</button>
+        <button data-d="-200">⏬ 온음 아래</button><button data-d="-100">🔽 반음 아래</button><button data-d="-10">↓ 조금 아래</button>
+      </div>
+      <div class="row" style="justify-content:center; margin-top:14px">
+        <button id="tPlay">🔁 다시 듣기</button>
+        <button class="primary" id="tDone">이게 맞아요 ✓</button>
+      </div>
     </div>
-    <div class="row" style="justify-content:center; margin-top:14px">
-      <button id="tPlay">🔁 다시 듣기</button>
-      <button class="primary" id="tDone">이게 맞아요 ✓</button>
+    <div id="tReveal" class="hidden">
+      <div class="status" id="tStatus"></div>
+      <div class="row" style="justify-content:center">
+        <button id="tMine">▶ 내가 맞춘 음</button><button id="tTrue">▶ 정확한 음</button>
+        <button class="primary" id="tNext">다음 →</button>
+      </div>
     </div>
   </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><b>지금까지</b><span id="tLive" class="sub"></span></div>
+    <div class="log" id="tLog"></div>
+  </div>
+  <div class="row" style="justify-content:center"><button id="tQuit" class="sub">그만하고 결과 보기</button></div>
 </section>
 
-<!-- 2부 결과 -->
+<!-- ② 결과 -->
 <section id="tuneResult" class="hidden">
-  <h1>2부 결과</h1>
-  <div class="card" style="padding:8px"><table id="tTbl"></table></div>
-  <div class="verdict" id="tVerdict"></div>
-  <div class="row" style="margin-top:16px">
-    <button class="primary" id="btnCopyAll">전체 결과 복사</button>
-    <button id="btnAgain2">처음으로</button>
+  <h1>② 음 높이 맞추기 결과</h1>
+  <div class="stat">
+    <div>평균 어긋남<b id="trMean"></b></div>
+    <div>들쭉날쭉한 정도<b id="trSd"></b></div>
+    <div>±30센트 안<b id="trIn"></b></div>
   </div>
-  <p class="sub" id="copied"></p>
+  <p class="sub">센트: 반음 = 100센트, 온음 = 200센트. +는 정확한 음보다 높게, −는 낮게 맞춘 거예요.</p>
+  <div class="verdict" id="tVerdict"></div>
+  <div id="tInstWrap"><h2>악기별</h2><div class="card" style="padding:8px"><table id="tInstTbl"></table></div></div>
+  <div id="tPastWrap" class="hidden"><h2>지난 기록과 비교</h2><div class="card" style="padding:8px"><table id="tPastTbl"></table></div></div>
+  <h2>음별 기록</h2>
+  <div class="card" style="padding:8px"><table id="tTbl"></table></div>
+  <div class="row" style="margin-top:16px">
+    <button class="primary" id="btnCopy2">결과 복사</button>
+    <button class="toIntro">처음으로</button>
+  </div>
 </section>
 
+<p class="sub" id="copied" style="text-align:center"></p>
+<p class="sub" style="text-align:center; font-size:12px; margin-top:40px">악기 소리: FluidR3 GM 사운드폰트 · 결과는 이 기기에만 저장돼요</p>
 </main>
 <script>
 const NAMES = ['도','디','레','메','미','파','피','솔','로','라','세','시'];
 const LETTERS = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+// 녹음 음원: FluidR3 GM (음높이 측정해서 ±8센트 안인 음만 사용)
+const INST = {
+  piano:    { name:'피아노',   icon:'🎹', lo:45, hi:88 },
+  clarinet: { name:'클라리넷', icon:'🎵', lo:50, hi:86 },
+  violin:   { name:'바이올린', icon:'🎻', lo:55, hi:80 },
+  flute:    { name:'플루트',   icon:'🎵', lo:60, hi:93 },
+  trumpet:  { name:'트럼펫',   icon:'🎺', lo:54, hi:84 },
+  guitar:   { name:'기타',     icon:'🎸', lo:40, hi:79 },
+  sine:     { name:'순음',     icon:'〰️', lo:48, hi:83 },
+};
+const MIX = ['piano','clarinet','violin','flute','trumpet','guitar'];
 const $ = id => document.getElementById(id);
-const show = id => ['intro','quiz','result','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+const show = id => { ['intro','quiz','result','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
+const rand = n => Math.floor(Math.random() * n);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const noteName = midi => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+const noteLabel = midi => `${NAMES[midi % 12]} (${LETTERS[midi % 12]}${Math.floor(midi / 12) - 1})`;
+const instLabel = k => `${INST[k].icon} ${INST[k].name}`;
+const offsetOf = (ans, pc) => { let d = ((ans - pc) % 12 + 12) % 12; return d > 6 ? d - 12 : d; };
+const sgn = x => (x > 0 ? '+' : '') + x;
 
-let settings = { count: 36, timbre: 'piano' };
+let settings = { count: 36, inst: 'mix' };
 document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  e.stopPropagation();
   seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  if (seg.id === 'segCount') settings.count = +b.dataset.v; else settings.timbre = b.dataset.v;
+  if (seg.id === 'segCount') settings.count = +b.dataset.v; else settings.inst = b.dataset.v;
 }));
 
 // ---------- 소리 ----------
@@ -165,56 +227,63 @@ function ac() {
   return ctx;
 }
 const freq = (midi, cents = 0) => 440 * Math.pow(2, (midi - 69) / 12 + cents / 1200);
-const PARTIALS = {
-  piano: [[1,1],[2,.55],[3,.3],[4,.2],[5,.1],[6,.07],[7,.04]],
-  clarinet: [[1,1],[3,.5],[5,.28],[7,.14],[9,.07]],
-  sine: [[1,1]],
-};
-function playTone(f, t0, dur, gain = .3) {
-  const c = ac(), timbre = settings.timbre;
-  const parts = PARTIALS[timbre];
-  const total = parts.reduce((s, p) => s + p[1], 0);
-  const out = c.createGain(); out.gain.value = gain / total; out.connect(c.destination);
-  for (const [n, a] of parts) {
-    if (f * n > 15000) continue;
-    const o = c.createOscillator(), g = c.createGain();
-    o.frequency.value = f * n;
-    g.gain.setValueAtTime(0, t0);
-    if (timbre === 'piano') {
-      g.gain.linearRampToValueAtTime(a, t0 + .006);
-      const tau = (f < 200 ? .9 : f < 500 ? .65 : .45) / (1 + .35 * (n - 1));
-      g.gain.setTargetAtTime(0, t0 + .006, tau);
-    } else {
-      g.gain.linearRampToValueAtTime(a, t0 + .05);
-    }
-    g.gain.setTargetAtTime(0, t0 + dur - .15, .05);
-    o.connect(g).connect(out);
-    o.start(t0); o.stop(t0 + dur + .2);
-  }
+const decoded = {};
+async function loadNote(inst, midi) {
+  const k = inst + midi;
+  if (inst === 'sine' || decoded[k]) return;
+  const buf = await ac().decodeAudioData(await (await fetch(`sounds/${inst}/${midi}.mp3`)).arrayBuffer());
+  // 악기마다 녹음 크기가 달라서 앞부분 음량으로 맞춤
+  const d = buf.getChannelData(0), n = Math.min(d.length, buf.sampleRate * .6);
+  let s = 0; for (let i = 0; i < n; i++) s += d[i] * d[i];
+  decoded[k] = { buf, gain: Math.min(4, .12 / Math.sqrt(s / n || 1e-6)) };
 }
-// 앞 음 기억을 지우는 무작위 음 뭉치 (음도 반음 사이로 틀어서 기준이 안 되게)
+async function preload(list) {
+  let done = 0;
+  $('loadMsg').textContent = '소리 불러오는 중…';
+  await Promise.all(list.map(([i, m]) => loadNote(i, m).then(() => $('loadMsg').textContent = `소리 불러오는 중… ${++done}/${list.length}`)));
+  $('loadMsg').textContent = '';
+}
+function playSine(f, t0, dur, gain = .25, type = 'sine') {
+  const c = ac(), o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain, t0 + .03);
+  g.gain.setTargetAtTime(0, t0 + dur - .12, .04);
+  o.connect(g).connect(c.destination); o.start(t0); o.stop(t0 + dur + .2);
+}
+function playNote(inst, midi, cents, t0, dur = 1.8) {
+  if (inst === 'sine') return playSine(freq(midi, cents), t0, dur);
+  const c = ac(), { buf, gain } = decoded[inst + midi];
+  const src = c.createBufferSource(), g = c.createGain();
+  src.buffer = buf; src.playbackRate.value = Math.pow(2, cents / 1200);
+  g.gain.setValueAtTime(gain, t0); g.gain.setTargetAtTime(0, t0 + dur - .15, .05);
+  src.connect(g).connect(c.destination); src.start(t0); src.stop(t0 + dur + .3);
+}
+// 앞 음 기억을 지우는 무작위 음 뭉치 (반음 사이로도 틀어서 기준이 안 되게)
 function playMask(t0) {
-  for (let i = 0; i < 12; i++) {
-    const m = 40 + Math.random() * 50;
-    playTone(freq(m, Math.random() * 100 - 50), t0 + i * .085, .14, .14);
-  }
+  for (let i = 0; i < 12; i++) playSine(freq(40 + Math.random() * 50, Math.random() * 100 - 50), t0 + i * .085, .14, .1, 'triangle');
   return t0 + 12 * .085 + 1.3;
 }
-const rand = n => Math.floor(Math.random() * n);
-const noteLabel = midi => `${NAMES[midi % 12]} (${LETTERS[midi % 12]}${Math.floor(midi / 12) - 1})`;
-const offsetOf = (ans, pc) => { let d = ((ans - pc) % 12 + 12) % 12; return d > 6 ? d - 12 : d; };
+function pickInsts(n) {
+  if (settings.inst !== 'mix') return Array(n).fill(settings.inst);
+  const a = []; while (a.length < n) a.push(...shuffle([...MIX]));
+  return a.slice(0, n);
+}
+function pickMidi(inst, pc, lo = 0, hi = 127) {
+  const L = Math.max(INST[inst].lo, lo), H = Math.min(INST[inst].hi, hi), opts = [];
+  for (let m = pc; m <= 127; m += 12) if (m >= L && m <= H) opts.push(m);
+  return opts.length ? opts[rand(opts.length)] : pickMidi(inst, pc);
+}
 
-// ---------- 1부: 퀴즈 ----------
+// ---------- ① 음 이름 맞히기 ----------
 let questions = [], qi = 0, answers = [], replaysLeft = 2, startedAt = 0, canAnswer = false, timerId;
 
 function buildKeyboard() {
   const kbd = $('kbd'); kbd.innerHTML = '';
-  const whites = [0,2,4,5,7,9,11], blacks = { 1:0, 3:1, 6:3, 8:4, 10:5 };
-  whites.forEach((pc, i) => {
+  [0,2,4,5,7,9,11].forEach((pc, i) => {
     const b = document.createElement('button'); b.className = 'w'; b.textContent = NAMES[pc];
     b.style.left = `calc(${i} * 100% / 7 + 2px)`; b.dataset.pc = pc; kbd.appendChild(b);
   });
-  for (const [pc, i] of Object.entries(blacks)) {
+  for (const [pc, i] of Object.entries({ 1:0, 3:1, 6:3, 8:4, 10:5 })) {
     const b = document.createElement('button'); b.className = 'b'; b.textContent = NAMES[pc];
     b.style.left = `calc(${i + 1} * 100% / 7 - 100% / 7 * 0.31)`; b.dataset.pc = pc; kbd.appendChild(b);
   }
@@ -222,28 +291,33 @@ function buildKeyboard() {
 }
 function setKeys(on) { canAnswer = on; $('kbd').querySelectorAll('button').forEach(b => b.disabled = !on); }
 
-function makeQuestions(n) {
+function makePcs(n) {
   for (let tries = 0; tries < 200; tries++) {
     const pcs = []; for (let k = 0; k < n / 12; k++) for (let pc = 0; pc < 12; pc++) pcs.push(pc);
-    for (let i = pcs.length - 1; i > 0; i--) { const j = rand(i + 1); [pcs[i], pcs[j]] = [pcs[j], pcs[i]]; }
-    if (pcs.every((p, i) => i === 0 || p !== pcs[i - 1])) return pcs.map(pc => 48 + 12 * rand(3) + pc); // 도3~시5
+    shuffle(pcs);
+    if (pcs.every((p, i) => i === 0 || p !== pcs[i - 1])) return pcs;
   }
 }
-
-function startQuiz() {
-  ac(); buildKeyboard();
-  questions = makeQuestions(settings.count); qi = 0; answers = [];
+async function startQuiz() {
+  ac();
+  const pcs = makePcs(settings.count), insts = pickInsts(settings.count);
+  questions = pcs.map((pc, i) => ({ inst: insts[i], midi: pickMidi(insts[i], pc) }));
+  await preload(questions.map(q => [q.inst, q.midi]));
+  buildKeyboard(); qi = 0; answers = []; renderLog();
   show('quiz'); nextQuestion();
 }
 function nextQuestion() {
   if (qi >= questions.length) return finishQuiz();
+  const q = questions[qi];
   replaysLeft = 2; $('replayLeft').textContent = 2; $('btnReplay').disabled = true;
   $('qNum').textContent = `${qi + 1} / ${questions.length}`;
   $('qBar').style.width = `${qi / questions.length * 100}%`;
   $('qTimer').textContent = '';
-  setKeys(false); $('qStatus').textContent = '섞는 중… 🎲';
-  const c = ac(); const t = playMask(c.currentTime + .1);
-  playTone(freq(questions[qi]), t, 1.8);
+  $('qInst').textContent = instLabel(q.inst);
+  setKeys(false); $('qStatus').className = 'status'; $('qStatus').textContent = '섞는 중… 🎲';
+  $('kbd').querySelectorAll('button').forEach(b => b.classList.remove('right', 'wrong'));
+  const c = ac(), t = playMask(c.currentTime + .1);
+  playNote(q.inst, q.midi, 0, t);
   setTimeout(() => {
     $('qStatus').textContent = '이 음은? 👂';
     startedAt = performance.now(); setKeys(true); $('btnReplay').disabled = false;
@@ -252,17 +326,48 @@ function nextQuestion() {
   }, (t - c.currentTime) * 1000);
 }
 function answer(pc) {
-  clearInterval(timerId); setKeys(false);
-  const midi = questions[qi];
-  answers.push({ midi, ans: pc, sec: (performance.now() - startedAt) / 1000, replays: 2 - replaysLeft });
-  qi++; setTimeout(nextQuestion, 300);
+  clearInterval(timerId); setKeys(false); $('btnReplay').disabled = true;
+  const q = questions[qi], real = q.midi % 12;
+  answers.push({ ...q, ans: pc, sec: (performance.now() - startedAt) / 1000, replays: 2 - replaysLeft });
+  // 바로 정답 보여주기
+  const d = offsetOf(pc, real), st = $('qStatus');
+  $('kbd').querySelector(`[data-pc="${real}"]`).classList.add('right');
+  if (d === 0) { st.className = 'status ok'; st.textContent = `✓ 정답! ${NAMES[pc]}`; }
+  else {
+    $('kbd').querySelector(`[data-pc="${pc}"]`).classList.add('wrong');
+    st.className = 'status ng';
+    st.textContent = `✗ ${NAMES[pc]} → 정답은 ${NAMES[real]} (${Math.abs(d)}반음 ${d > 0 ? '높게' : '낮게'} 답함)`;
+  }
+  renderLog();
+  qi++; setTimeout(nextQuestion, 1800);
+}
+function renderLog() {
+  if (!answers.length) { $('liveScore').textContent = ''; $('log').innerHTML = '<span class="sub">첫 문제를 풀면 여기에 쌓여요</span>'; return; }
+  const ok = answers.filter(a => a.ans === a.midi % 12).length;
+  $('liveScore').textContent = `${answers.length}문제 중 ${ok}개 정답 (${Math.round(ok / answers.length * 100)}%)`;
+  $('log').innerHTML = answers.map((a, i) => {
+    const d = offsetOf(a.ans, a.midi % 12);
+    return `<div><span>#${i + 1} ${INST[a.inst].icon} 나온 음 <b>${NAMES[a.midi % 12]}</b> · 내 답 <b>${NAMES[a.ans]}</b></span>
+      <span class="${d === 0 ? 'good' : 'off'}">${d === 0 ? '✓' : sgn(d)} · ${a.sec.toFixed(1)}초</span></div>`;
+  }).reverse().join('');
 }
 $('btnReplay').onclick = () => {
   if (!replaysLeft) return; replaysLeft--; $('replayLeft').textContent = replaysLeft;
   if (!replaysLeft) $('btnReplay').disabled = true;
-  playTone(freq(questions[qi]), ac().currentTime + .05, 1.8);
+  const q = questions[qi]; playNote(q.inst, q.midi, 0, ac().currentTime + .05);
 };
 $('btnQuit').onclick = () => { clearInterval(timerId); setKeys(false); finishQuiz(); };
+
+function pastTable(key, now, cols) {
+  const past = JSON.parse(localStorage.getItem(key) || '[]');
+  localStorage.setItem(key, JSON.stringify([...past, now].slice(-20)));
+  if (!past.length) return '';
+  const instName = k => k === 'mix' ? '섞어서' : INST[k]?.name || '';
+  return `<tr><th>날짜</th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr>` +
+    [...past.slice(-5), now].reverse().map(r => `<tr${r === now ? ' style="font-weight:700"' : ''}>
+      <td>${r === now ? '지금' : new Date(r.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} ${instName(r.inst)}</td>
+      ${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('');
+}
 
 let summary1 = '';
 function finishQuiz() {
@@ -281,92 +386,166 @@ function finishQuiz() {
   const max = Math.max(...Object.values(hist));
   $('bars').innerHTML = Object.entries(hist).sort((a, b) => a[0] - b[0]).map(([d, c]) =>
     `<div class="bar ${+d === 0 ? 'zero' : ''}"><span class="n">${c || ''}</span><div class="fill" style="height:${c / max * 100}%"></div>
-     <span class="lbl">${+d === 0 ? '정답' : (d > 0 ? '+' : '') + d}</span></div>`).join('');
+     <span class="lbl">${+d === 0 ? '정답' : sgn(+d)}</span></div>`).join('');
 
-  // 가장 많이 나온 어긋남
-  let top = 0; for (let d = -5; d <= 6; d++) if (d !== 0 && hist[d] > (hist[top] || 0)) top = d;
+  // 정답 말고 가장 많이 나온 어긋남
+  let top = 1; for (let d = -5; d <= 6; d++) if (d !== 0 && hist[d] > hist[top]) top = d;
   const ex = exact / n, topShare = hist[top] / n;
   const shiftText = d => d === 1 ? '반음 높게' : d === -1 ? '반음 낮게' : d === 2 ? '온음(2반음) 높게' : d === -2 ? '온음(2반음) 낮게' : `${Math.abs(d)}반음 ${d > 0 ? '높게' : '낮게'}`;
+  const shifted = topShare >= .4 && topShare > ex;
   let v;
   if (ex >= .8) v = `🎯 <b>절대음감이 있어요.</b> ${pct(exact)}를 기준음 없이 맞혔어요 (찍으면 약 8%).`;
-  else if (topShare >= .4 && topShare > ex) {
+  else if (shifted) {
     v = `🎯 <b>음 이름은 일정하게 잡는데, 기준이 ${shiftText(top)} 밀려 있어요.</b> ${pct(hist[top])}를 똑같이 ${shiftText(top)} 답했어요. 정답과 이것을 합치면 ${pct(hist[top] + exact)}라, 음감 자체는 있는 쪽이에요.`;
     if (top === 2) v += `<br>💡 +2는 B♭ 악기(클라리넷·트럼펫 등) 악보 이름과 똑같은 차이예요. 이런 악기를 한다면 악기 기준 이름으로 듣고 있을 가능성이 커요.`;
     else if (top === 1) v += `<br>💡 머릿속 기준이 반음 아래로 옮겨가서, 실제 음이 반음 높게 들리는 상태로 보여요. 피아노가 반음 높게 들린다고 느낀 적 있다면 바로 이거예요. 나이가 들면서 이렇게 되는 경우가 꽤 알려져 있어요.`;
   }
   else if (near / n >= .6) v = `🙂 <b>정확하진 않지만 근처는 잘 잡아요.</b> 반음 차이까지 치면 ${pct(near)}예요. 음 높이 느낌은 있는데 반음 단위로 헷갈리는 상태예요.`;
   else v = `🎼 <b>기준음 없이 이름 맞히기는 어려운 편이에요.</b> 대부분의 사람이 이래요. 앞 음과 비교해서 듣는 상대음감 위주라는 뜻이고, 합주에는 오히려 이쪽이 더 중요해요.`;
-  if (!(topShare >= .4 && topShare > ex) && hist[1] >= 3 && hist[1] >= 2 * hist[-1])
+  if (!shifted && n - exact >= 3 && hist[1] >= (n - exact) / 2 && hist[1] >= 2 * hist[-1])
     v += `<br>💡 틀린 답은 주로 <b>반음 높게(+1)</b> 나왔어요. 실제 음이 조금 높게 들리는 쪽으로 기울어 있어요.`;
   if (avgT > 4) v += `<br>⏱ 평균 ${avgT.toFixed(1)}초가 걸렸어요. 절대음감은 보통 1~2초 안에 바로 떠올라서, 오래 걸렸다면 계산해서 맞힌 것일 수 있어요.`;
   $('verdict').innerHTML = v;
 
-  $('tbl').innerHTML = '<tr><th>#</th><th>나온 음</th><th>내 답</th><th>차이</th><th>시간</th></tr>' + answers.map((a, i) => {
-    const d = offs[i];
-    return `<tr><td>${i + 1}</td><td>${noteLabel(a.midi)}</td><td>${NAMES[a.ans]}</td>
-      <td class="${d === 0 ? 'good' : 'off'}">${d === 0 ? '✓' : (d > 0 ? '+' : '') + d}</td><td>${a.sec.toFixed(1)}초${a.replays ? ' 🔁' + a.replays : ''}</td></tr>`;
+  // 악기별
+  const byInst = {};
+  answers.forEach((a, i) => { (byInst[a.inst] ??= []).push(offs[i]); });
+  $('instWrap').classList.toggle('hidden', Object.keys(byInst).length < 2);
+  $('instTbl').innerHTML = '<tr><th>악기</th><th>정답</th><th>반음 이내</th><th>주로 밀린 쪽</th></tr>' + Object.entries(byInst).map(([k, ds]) => {
+    const e = ds.filter(d => d === 0).length, nr = ds.filter(d => Math.abs(d) <= 1).length, wrong = ds.filter(d => d);
+    const mode = wrong.length ? Object.entries(wrong.reduce((m, d) => (m[d] = (m[d] || 0) + 1, m), {})).sort((a, b) => b[1] - a[1])[0][0] : null;
+    return `<tr><td>${instLabel(k)}</td><td>${e}/${ds.length}</td><td>${Math.round(nr / ds.length * 100)}%</td><td>${mode === null ? '-' : sgn(+mode)}</td></tr>`;
   }).join('');
 
-  summary1 = `[1부 음 이름 맞히기] ${new Date().toLocaleString('ko-KR')} / 음색 ${settings.timbre}\n` +
+  // 지난 기록 (이 기기에만 저장)
+  const now = { at: Date.now(), n, exact, near, avgT, top: hist[top] ? top : 0, inst: settings.inst };
+  const pt = pastTable('pitchHistory', now, [
+    ['정답률', r => Math.round(r.exact / r.n * 100) + '%'], ['반음 이내', r => Math.round(r.near / r.n * 100) + '%'],
+    ['자주 밀린 쪽', r => r.top ? sgn(r.top) : '-'], ['평균 시간', r => r.avgT.toFixed(1) + '초']]);
+  $('pastWrap').classList.toggle('hidden', !pt); $('pastTbl').innerHTML = pt;
+
+  $('tbl').innerHTML = '<tr><th>#</th><th>악기</th><th>나온 음</th><th>내 답</th><th>차이</th><th>시간</th></tr>' + answers.map((a, i) => {
+    const d = offs[i];
+    return `<tr><td>${i + 1}</td><td>${INST[a.inst].icon}</td><td>${noteLabel(a.midi)}</td><td>${NAMES[a.ans]}</td>
+      <td class="${d === 0 ? 'good' : 'off'}">${d === 0 ? '✓' : sgn(d)}</td><td>${a.sec.toFixed(1)}초${a.replays ? ' 🔁' + a.replays : ''}</td></tr>`;
+  }).join('');
+
+  summary1 = `[음 이름 맞히기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}\n` +
     `정확 ${exact}/${n} (${pct(exact)}), 반음 이내 ${pct(near)}, 평균 ${avgT.toFixed(1)}초\n` +
-    `어긋남 분포: ${Object.entries(hist).sort((a, b) => a[0] - b[0]).filter(([, c]) => c).map(([d, c]) => `${d > 0 ? '+' : ''}${d}:${c}`).join(' ')}\n` +
-    `문제별: ${answers.map((a, i) => `${NAMES[a.midi % 12]}${Math.floor(a.midi / 12) - 1}→${NAMES[a.ans]}(${a.sec.toFixed(1)}s)`).join(', ')}`;
+    `어긋남 분포: ${Object.entries(hist).sort((a, b) => a[0] - b[0]).filter(([, c]) => c).map(([d, c]) => `${sgn(+d)}:${c}`).join(' ')}\n` +
+    `문제별: ${answers.map(a => `${INST[a.inst].name} ${noteName(a.midi)}→${NAMES[a.ans]}(${a.sec.toFixed(1)}s)`).join(', ')}`;
 }
 
-// ---------- 2부: 기준음 찾기 ----------
-const TUNE_TARGETS = [69, 60, 64]; // 라4, 도4, 미4
-let ti = 0, hidden = 0, tuneResults = [], playTimer;
-function startTune() {
-  ac(); ti = 0; tuneResults = []; show('tune'); nextTune();
+// ---------- ② 음 높이 맞추기 ----------
+let tTrials = [], ti = 0, hidden = 0, tResults = [];
+const errText = c => {
+  const a = Math.abs(c), dir = c > 0 ? '높게' : '낮게';
+  if (a < 15) return '거의 정확 🎯';
+  if (a < 50) return `조금 ${dir}`;
+  if (a < 150) return `약 반음 ${dir}`;
+  if (a < 250) return `약 온음 ${dir}`;
+  return `${(a / 100).toFixed(1)}반음 ${dir}`;
+};
+async function startTune() {
+  ac();
+  const pcs = shuffle([...Array(12).keys()]), insts = pickInsts(12);
+  tTrials = pcs.map((pc, i) => ({ inst: insts[i], midi: pickMidi(insts[i], pc, 53, 81) }));
+  await preload(tTrials.map(t => [t.inst, t.midi]));
+  ti = 0; tResults = []; renderTuneLog(); show('tune'); nextTune();
 }
 function nextTune() {
-  if (ti >= TUNE_TARGETS.length) return finishTune();
-  $('tNum').textContent = `${ti + 1} / ${TUNE_TARGETS.length}`;
-  $('tTarget').textContent = NAMES[TUNE_TARGETS[ti] % 12];
-  const sign = Math.random() < .5 ? -1 : 1;
-  hidden = sign * (60 + rand(190)); // 실제보다 ±60~250센트 틀어진 상태에서 시작
+  if (ti >= tTrials.length) return finishTune();
+  const t = tTrials[ti];
+  $('tNum').textContent = `${ti + 1} / ${tTrials.length}`;
+  $('tBar').style.width = `${ti / tTrials.length * 100}%`;
+  $('tInst').textContent = instLabel(t.inst);
+  $('tTarget').textContent = NAMES[t.midi % 12];
+  $('tAdjust').classList.remove('hidden'); $('tReveal').classList.add('hidden');
+  hidden = (Math.random() < .5 ? -1 : 1) * (50 + rand(300)); // 정확한 음에서 ±50~350센트 틀어진 상태로 시작
   $('tSlider').value = rand(201) - 100;
-  const c = ac(); const t = playMask(c.currentTime + .1);
-  playTune(t);
+  playTune(playMask(ac().currentTime + .1));
 }
 const tuneCents = () => hidden + +$('tSlider').value;
-function playTune(t) { playTone(freq(TUNE_TARGETS[ti], tuneCents()), t ?? ac().currentTime + .05, 1.6); }
+function playTune(at, cents = tuneCents()) { const t = tTrials[ti]; playNote(t.inst, t.midi, cents, at ?? ac().currentTime + .05); }
 $('tSlider').addEventListener('change', () => playTune());
 document.querySelectorAll('#tune [data-d]').forEach(b => b.onclick = () => {
-  const s = $('tSlider'); s.value = Math.max(-400, Math.min(400, +s.value + +b.dataset.d)); playTune();
+  const s = $('tSlider'), v = +s.value + +b.dataset.d;
+  if (v > 700 || v < -700) { s.value = Math.max(-700, Math.min(700, v)); return playTune(); }
+  s.value = v; playTune();
 });
 $('tPlay').onclick = () => playTune();
-$('tDone').onclick = () => { tuneResults.push({ midi: TUNE_TARGETS[ti], cents: tuneCents() }); ti++; nextTune(); };
+$('tDone').onclick = () => {
+  const c = tuneCents();
+  tResults.push({ ...tTrials[ti], cents: c });
+  $('tAdjust').classList.add('hidden'); $('tReveal').classList.remove('hidden');
+  const st = $('tStatus');
+  st.className = 'status ' + (Math.abs(c) < 30 ? 'ok' : 'ng');
+  st.innerHTML = `${errText(c)}<br><span class="sub">정확한 ${NAMES[tTrials[ti].midi % 12]}보다 ${sgn(Math.round(c))}센트</span>`;
+  renderTuneLog();
+};
+$('tMine').onclick = () => playTune(undefined, tResults[tResults.length - 1].cents);
+$('tTrue').onclick = () => playTune(undefined, 0);
+$('tNext').onclick = () => { ti++; nextTune(); };
+$('tQuit').onclick = () => finishTune();
+function renderTuneLog() {
+  if (!tResults.length) { $('tLive').textContent = ''; $('tLog').innerHTML = '<span class="sub">첫 음을 맞추면 여기에 쌓여요</span>'; return; }
+  const m = tResults.reduce((s, r) => s + r.cents, 0) / tResults.length;
+  $('tLive').textContent = `평균 ${sgn(Math.round(m))}센트`;
+  $('tLog').innerHTML = tResults.map((r, i) => `<div><span>#${i + 1} ${INST[r.inst].icon} <b>${NAMES[r.midi % 12]}</b></span>
+    <span class="${Math.abs(r.cents) < 30 ? 'good' : 'off'}">${sgn(Math.round(r.cents))}센트 · ${errText(r.cents)}</span></div>`).reverse().join('');
+}
 
 let summary2 = '';
 function finishTune() {
   show('tuneResult');
-  const cs = tuneResults.map(r => r.cents);
-  const mean = cs.reduce((s, x) => s + x, 0) / cs.length;
-  const spread = Math.max(...cs) - Math.min(...cs);
-  const fmt = c => `${c > 0 ? '+' : ''}${Math.round(c)}센트`;
-  $('tTbl').innerHTML = '<tr><th>목표 음</th><th>내가 고른 높이</th><th>뜻</th></tr>' + tuneResults.map(r =>
-    `<tr><td>${noteLabel(r.midi)}</td><td>${fmt(r.cents)}</td><td>${Math.abs(r.cents) < 30 ? '거의 정확' : r.cents < 0 ? '실제보다 낮게 맞춤' : '실제보다 높게 맞춤'}</td></tr>`).join('');
-  let v = `평균 <b>${fmt(mean)}</b> (반음 = 100센트), 세 번 사이 차이 ${Math.round(spread)}센트.<br>`;
-  if (spread > 150) v += `🎲 세 번이 들쭉날쭉해요. 머릿속에 고정된 기준음이 강하진 않은 편이라, 평균값은 참고만 하세요.`;
-  else if (Math.abs(mean) < 30) v += `🎯 머릿속 기준음이 실제와 거의 같아요.`;
-  else if (mean < 0) v += `🎯 내 귀의 기준이 실제보다 약 ${Math.round(-mean)}센트(반음의 ${Math.round(-mean)}%) <b>낮아요</b>. 그래서 실제 음들이 그만큼 <b>높게 들리는</b> 거예요.${mean < -70 ? ' 피아노가 반음 높게 들린다고 느꼈다면 이것 때문이에요.' : ''}`;
-  else v += `🎯 내 귀의 기준이 실제보다 약 ${Math.round(mean)}센트 <b>높아요</b>. 그래서 실제 음들이 그만큼 낮게 들리는 편이에요.`;
+  const n = tResults.length;
+  if (!n) { $('tVerdict').textContent = '맞춘 음이 없어요.'; return; }
+  const cs = tResults.map(r => r.cents);
+  const mean = cs.reduce((s, x) => s + x, 0) / n;
+  const sd = Math.sqrt(cs.reduce((s, x) => s + (x - mean) ** 2, 0) / n);
+  const inside = cs.filter(c => Math.abs(c) < 30).length;
+  $('trMean').textContent = `${sgn(Math.round(mean))}센트`;
+  $('trSd').textContent = `±${Math.round(sd)}센트`;
+  $('trIn').textContent = `${inside}/${n}`;
+  let v = '';
+  if (sd > 120) v = `🎲 <b>음마다 들쭉날쭉해요.</b> 머릿속에 고정된 기준음이 강하진 않은 편이에요. 대부분의 사람이 이렇고, 평균값은 참고만 하세요.`;
+  else if (Math.abs(mean) < 30) v = `🎯 <b>머릿속 기준음이 실제와 거의 같아요.</b>`;
+  else if (mean < 0) v = `🎯 <b>내 귀의 기준이 실제보다 약 ${Math.round(-mean)}센트 낮아요</b> (반음의 ${Math.round(-mean)}%). 그래서 실제 음들이 그만큼 <b>높게 들리는</b> 거예요.${mean < -70 ? ' 피아노가 반음 높게 들린다고 느꼈다면 이것 때문이에요.' : ''}`;
+  else v = `🎯 <b>내 귀의 기준이 실제보다 약 ${Math.round(mean)}센트 높아요.</b> 그래서 실제 음들이 그만큼 낮게 들리는 편이에요.`;
+  if (sd <= 120) v += `<br>음마다 차이는 ±${Math.round(sd)}센트${sd < 40 ? '로 아주 일정해요. 고정된 기준음이 뚜렷하다는 뜻이에요.' : '예요.'}`;
   $('tVerdict').innerHTML = v;
-  summary2 = `[2부 기준음 찾기] ${tuneResults.map(r => `${NAMES[r.midi % 12]}${Math.floor(r.midi / 12) - 1} ${fmt(r.cents)}`).join(', ')} / 평균 ${fmt(mean)}, 차이 ${Math.round(spread)}센트`;
+
+  const byInst = {};
+  tResults.forEach(r => (byInst[r.inst] ??= []).push(r.cents));
+  $('tInstWrap').classList.toggle('hidden', Object.keys(byInst).length < 2);
+  $('tInstTbl').innerHTML = '<tr><th>악기</th><th>평균</th><th>횟수</th></tr>' + Object.entries(byInst).map(([k, a]) =>
+    `<tr><td>${instLabel(k)}</td><td>${sgn(Math.round(a.reduce((s, x) => s + x, 0) / a.length))}센트</td><td>${a.length}</td></tr>`).join('');
+
+  const now = { at: Date.now(), n, mean, sd, inside, inst: settings.inst };
+  const pt = pastTable('tuneHistory', now, [
+    ['평균', r => sgn(Math.round(r.mean)) + '센트'], ['들쭉날쭉', r => '±' + Math.round(r.sd)], ['±30 안', r => `${r.inside}/${r.n}`]]);
+  $('tPastWrap').classList.toggle('hidden', !pt); $('tPastTbl').innerHTML = pt;
+
+  $('tTbl').innerHTML = '<tr><th>#</th><th>악기</th><th>음</th><th>맞춘 높이</th><th>뜻</th></tr>' + tResults.map((r, i) =>
+    `<tr><td>${i + 1}</td><td>${INST[r.inst].icon}</td><td>${noteLabel(r.midi)}</td>
+     <td class="${Math.abs(r.cents) < 30 ? 'good' : 'off'}">${sgn(Math.round(r.cents))}센트</td><td>${errText(r.cents)}</td></tr>`).join('');
+
+  summary2 = `[음 높이 맞추기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}\n` +
+    `평균 ${sgn(Math.round(mean))}센트, 들쭉날쭉 ±${Math.round(sd)}센트, ±30센트 안 ${inside}/${n}\n` +
+    `음별: ${tResults.map(r => `${INST[r.inst].name} ${noteName(r.midi)} ${sgn(Math.round(r.cents))}`).join(', ')}`;
 }
 
 // ---------- 버튼 ----------
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); }
   catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  $('copied').textContent = '복사됐어요. 카톡 등에 붙여넣어 공유하세요.';
 }
 $('btnStart').onclick = startQuiz;
-$('btnTuneOnly').onclick = startTune;
-$('btnToTune').onclick = startTune;
-$('btnCopy1').onclick = async () => { await copy(summary1); $('btnCopy1').textContent = '복사됨 ✓'; };
-$('btnCopyAll').onclick = async () => { await copy([summary1, summary2].filter(Boolean).join('\n\n')); $('copied').textContent = '복사됐어요. 카톡 등에 붙여넣어 공유하세요.'; };
-$('btnAgain').onclick = $('btnAgain2').onclick = () => { $('btnCopy1').textContent = '결과 복사'; $('copied').textContent = ''; show('intro'); };
+$('btnTune').onclick = startTune;
+$('btnCopy1').onclick = () => copy(summary1);
+$('btnCopy2').onclick = () => copy(summary2);
+document.querySelectorAll('.toIntro').forEach(b => b.onclick = () => show('intro'));
 </script>
 </body>
 </html>
