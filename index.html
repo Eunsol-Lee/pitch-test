@@ -71,6 +71,7 @@
   .trans b { color:var(--ink); }
   .instGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:10px; }
   .instGrid button { text-align:left; padding:10px 12px; }
+  .instGrid .grpH { grid-column:1 / -1; font-size:13px; font-weight:700; color:var(--sub); margin-top:8px; }
   .instGrid button b { display:block; font-size:16px; }
   .instGrid button small { display:block; color:var(--sub); font-size:12px; margin-top:2px; line-height:1.4; }
   .instGrid button.on { border:2px solid var(--accent); background:#eef3fc; padding:9px 11px; }
@@ -97,8 +98,8 @@
     <div class="row" style="margin-top:14px"><b>① 문제 수</b>
       <span class="seg row" id="segCount"><button data-v="24">24문제</button><button data-v="36" class="on">36문제</button></span></div>
     <div style="margin-top:16px"><b>답하는 이름 기준</b>
-      <div class="sub">클라리넷처럼 악보 이름과 실제 소리가 다른 악기를 한다면, 악보 이름으로도 연습해 보세요. 예: 실제 소리 <b>도</b> = B♭ 악보 <b>레</b> = A 악보 <b>메(미♭)</b></div>
-      <span class="seg row" id="segKey" style="margin-top:8px"><button data-v="C">실제 소리 (C)</button><button data-v="Bb">B♭ 악기 악보</button><button data-v="A">A 악기 악보</button></span></div>
+      <div class="sub">악보 이름과 실제 소리가 다른 악기(클라리넷·트럼펫 B♭, 클라리넷 A, 호른·잉글리시 호른 F)를 한다면, 악보 이름으로도 연습해 보세요. 예: 실제 소리 <b>도</b> = B♭ 악보 <b>레</b> = A 악보 <b>ri/me</b> = F 악보 <b>솔</b></div>
+      <span class="seg row" id="segKey" style="margin-top:8px"><button data-v="C">실제 소리 (C)</button><button data-v="Bb">B♭ 악기 악보</button><button data-v="A">A 악기 악보</button><button data-v="F">F 악기 악보</button></span></div>
   </div>
   <button class="mode" id="btnStart"><b>① 음 이름 맞히기</b><span>음을 듣고 도레미로 답해요. 답하면 바로 정답이 나와요. 24문제 약 4분 · 36문제 약 6분.</span></button>
   <button class="mode" id="btnEar"><b>② 귀 맞추기 연습</b><span>이름을 보고 머릿속으로 먼저 음을 떠올린 다음, 정확한 음을 들어보고 비교해요. 12음 전부, 약 5분. 매일 연습용.</span></button>
@@ -259,15 +260,30 @@ const NAMES = ['도','di/ra','레','ri/me','미','파','fi/se','솔','si/le','�
 const LETTERS = ['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];
 // 녹음 음원: FluidR3 GM (음높이 측정해서 ±8센트 안인 음만 사용)
 const INST = {
-  piano:    { name:'피아노',   icon:'🎹', lo:45, hi:88 },
-  clarinet: { name:'클라리넷', icon:'🎵', lo:50, hi:86 },
-  violin:   { name:'바이올린', icon:'🎻', lo:55, hi:80 },
-  flute:    { name:'플루트',   icon:'🎵', lo:60, hi:93 },
-  trumpet:  { name:'트럼펫',   icon:'🎺', lo:54, hi:84 },
-  guitar:   { name:'기타',     icon:'🎸', lo:40, hi:79 },
-  sine:     { name:'순음',     icon:'〰️', lo:48, hi:83 },
+  violin:      { name:'바이올린',       icon:'🎻', lo:55, hi:80 },
+  viola:       { name:'비올라',         icon:'🎻', lo:48, hi:84 },
+  cello:       { name:'첼로',           icon:'🎻', lo:36, hi:76 },
+  contrabass:  { name:'콘트라베이스',   icon:'🎻', lo:28, hi:57 },
+  piccolo:     { name:'피콜로',         icon:'🪈', lo:74, hi:102 },
+  flute:       { name:'플루트',         icon:'🪈', lo:60, hi:93 },
+  oboe:        { name:'오보에',         icon:'🪈', lo:58, hi:91 },
+  englishhorn: { name:'잉글리시 호른',  icon:'🪈', lo:52, hi:81 },
+  clarinet:    { name:'클라리넷',       icon:'🪈', lo:50, hi:86 },
+  bassoon:     { name:'바순',           icon:'🪈', lo:34, hi:75 },
+  horn:        { name:'호른',           icon:'🎺', lo:41, hi:77 },
+  trumpet:     { name:'트럼펫',         icon:'🎺', lo:54, hi:84 },
+  trombone:    { name:'트롬본',         icon:'🎺', lo:40, hi:74 },
+  tuba:        { name:'튜바',           icon:'🎺', lo:28, hi:62 },
+  piano:       { name:'피아노',         icon:'🎹', lo:45, hi:88 },
+  harp:        { name:'하프',           icon:'🎼', lo:36, hi:91 },
+  guitar:      { name:'기타',           icon:'🎸', lo:40, hi:79 },
+  sine:        { name:'순음',           icon:'〰️', lo:48, hi:83 },
 };
-const MIX = ['piano','clarinet','violin','flute','trumpet','guitar'];
+const GROUPS = [['현악기', ['violin','viola','cello','contrabass']], ['목관악기', ['piccolo','flute','oboe','englishhorn','clarinet','bassoon']],
+  ['금관악기', ['horn','trumpet','trombone','tuba']], ['건반·발현·기타', ['piano','harp','guitar','sine','mix']]];
+const MIX = Object.keys(INST).filter(k => k !== 'sine');
+// 녹음마다 음높이를 재서 틀어진 만큼(센트) 재생할 때 보정
+const CORR = {"bassoon":{"36":19,"37":19,"44":-16,"45":-15,"46":-14,"47":-5,"48":-4,"49":-4,"56":-8,"57":-7,"58":-6,"69":-3,"70":-3,"73":11,"74":11,"75":11},"cello":{"36":5,"37":5,"38":5,"39":5,"43":6,"44":5,"45":5,"55":-20,"56":-20,"57":-19,"58":4,"59":3,"67":-3,"68":-3},"clarinet":{},"contrabass":{"36":4,"37":4,"38":3},"englishhorn":{"53":8,"54":7,"55":7,"62":-10,"63":-10,"64":-9,"65":6,"66":5,"67":5,"68":3,"69":-7,"70":-7,"71":-7,"72":-7,"73":-6,"74":-6,"75":-13,"76":-13,"77":-13,"78":-13,"79":-13,"80":-13,"81":-13},"flute":{"60":8,"61":7,"62":7,"63":5,"64":5,"65":5,"66":6,"67":6,"68":6,"71":3,"72":5,"73":5,"74":4,"75":4,"76":4,"77":4,"78":4},"guitar":{"54":-3,"55":-3,"58":-3},"harp":{"47":6,"48":6,"49":5,"50":5,"51":4,"52":4,"53":4,"54":4,"55":4,"56":11,"57":11,"58":-3,"59":-3,"76":-4,"77":-4,"78":-4,"79":-4,"80":-4,"81":-4,"82":5,"83":5,"84":5,"85":5,"86":5,"87":6,"88":6,"89":6,"90":6,"91":6},"horn":{"42":4,"43":4,"44":5,"45":5,"46":5,"50":3,"51":4,"52":4,"53":5,"54":5,"55":5,"56":5,"57":4,"58":3,"61":-3,"62":-3,"65":4,"66":3,"67":3,"73":4,"75":-3,"76":-4,"77":-4},"oboe":{"72":-6,"73":-6,"74":-6,"75":-6,"80":-5,"81":-5,"82":-8,"83":-8,"84":-8,"85":-8,"86":-8,"87":-8,"88":-8,"89":-8,"90":-8,"91":-8},"piano":{"45":-4,"46":-3,"75":5,"76":5,"77":5,"78":5,"83":3,"84":3,"85":4,"86":3,"87":3},"piccolo":{"74":9,"75":9,"76":9,"77":9,"78":9,"79":4,"80":4,"81":6,"82":7,"83":4,"84":4,"93":3,"94":3,"95":3,"96":4,"97":4,"98":4,"99":4,"100":4,"101":5},"trombone":{"52":-3},"trumpet":{},"tuba":{},"viola":{"48":3,"49":3,"50":3,"54":15,"55":15,"56":15,"63":-5,"64":-5,"65":-4,"66":24,"67":24,"68":24,"72":14,"73":14,"74":14,"78":-6,"79":-6,"80":-6,"84":-15},"violin":{"55":4,"56":3,"59":12,"60":12,"61":12,"68":5,"69":5,"70":5,"71":4,"72":4,"73":4,"74":3,"75":-14,"76":-14,"77":-14,"78":-13,"79":-13,"80":-13}};
 const $ = id => document.getElementById(id);
 const show = id => { if (id === 'intro') renderInstGrid(); ['intro','quiz','result','ear','earResult','tune','tuneResult'].forEach(s => $(s).classList.toggle('hidden', s !== id)); $('copied').textContent = ''; scrollTo(0, 0); };
 const rand = n => Math.floor(Math.random() * n);
@@ -279,8 +295,8 @@ const offsetOf = (ans, pc) => { let d = ((ans - pc) % 12 + 12) % 12; return d > 
 const sgn = x => (x > 0 ? '+' : '') + x;
 
 let settings = { count: 36, inst: localStorage.getItem('pitchInst') || 'piano', key: localStorage.getItem('pitchKey') || 'C' };
-// 이조 악기: 악보 이름 = 실제 소리 + shift 반음 (B♭ 악기 +2, A 악기 +3)
-const KEYS = { C: { label: '실제 소리', shift: 0 }, Bb: { label: 'B♭ 악보', shift: 2 }, A: { label: 'A 악보', shift: 3 } };
+// 이조 악기: 악보 이름 = 실제 소리 + shift 반음 (B♭ 악기 +2, A 악기 +3, F 악기 +7)
+const KEYS = { C: { label: '실제 소리', shift: 0 }, Bb: { label: 'B♭ 악보', shift: 2 }, A: { label: 'A 악보', shift: 3 }, F: { label: 'F 악보', shift: 7 } };
 const wpc = (midi, key = settings.key) => (midi + KEYS[key].shift) % 12;
 const transLine = midi => Object.entries(KEYS).map(([k, v]) => {
   const t = `${v.label} ${NAMES[wpc(midi, k)]}`; return k === settings.key ? `<b>${t}</b>` : t;
@@ -341,7 +357,7 @@ function playNote(inst, midi, cents, t0, dur = 1.8) {
   if (inst === 'sine') return playSine(freq(midi, cents), t0, dur);
   const c = ac(), { buf, gain } = decoded[inst + midi];
   const src = c.createBufferSource(), g = c.createGain();
-  src.buffer = buf; src.playbackRate.value = Math.pow(2, cents / 1200);
+  src.buffer = buf; src.playbackRate.value = Math.pow(2, (cents - (CORR[inst]?.[midi] || 0)) / 1200);
   g.gain.setValueAtTime(gain, t0); g.gain.setTargetAtTime(0, t0 + dur - .15, .05);
   src.connect(g).connect(c.destination); src.start(t0); src.stop(t0 + dur + .3);
 }
@@ -388,7 +404,7 @@ function makePcs(n) {
 async function startQuiz() {
   ac();
   const pcs = makePcs(settings.count), insts = pickInsts(settings.count);
-  questions = pcs.map((pc, i) => ({ inst: insts[i], midi: pickMidi(insts[i], pc) }));
+  questions = pcs.map((pc, i) => ({ inst: insts[i], midi: pickMidi(insts[i], pc, 36, 96) }));
   await preload(questions.map(q => [q.inst, q.midi]));
   buildKeyboard(); qi = 0; answers = []; renderLog();
   show('quiz'); nextQuestion();
@@ -711,13 +727,13 @@ async function copy(text) {
 function renderInstGrid() {
   const load = k => JSON.parse(localStorage.getItem(k) || '[]');
   const h1 = load('pitchHistory'), h2 = load('tuneHistory'), h3 = load('earHistory');
-  $('instGrid').innerHTML = [...MIX, 'sine', 'mix'].map(k => {
+  $('instGrid').innerHTML = GROUPS.map(([g, ks]) => `<div class="grpH">${g}</div>` + ks.map(k => {
     const mine = h => h.filter(r => r.inst === k && (r.key || 'C') === settings.key);
     const a = mine(h1), b = mine(h2), e = mine(h3), la = a[a.length - 1], lb = b[b.length - 1], le = e[e.length - 1];
     const lines = [la ? `① 최근 ${Math.round(la.exact / la.n * 100)}% (${a.length}회)` : '', le ? `② 최근 딱 맞음 ${Math.round(le.ok / le.n * 100)}% (${e.length}회)` : '',
       lb ? `③ 최근 ${sgn(Math.round(lb.mean))}센트 (${b.length}회)` : ''].filter(Boolean);
     return `<button data-v="${k}" class="${k === settings.inst ? 'on' : ''}"><b>${k === 'mix' ? '🎲 섞어서' : instLabel(k)}</b><small>${lines.join('<br>') || '아직 기록 없음'}</small></button>`;
-  }).join('');
+  }).join('')).join('');
   document.querySelectorAll('.pastH').forEach(h => h.textContent = `${settings.inst === 'mix' ? '🎲 섞어서' : instLabel(settings.inst)}${keyName()} 지난 기록`);
   document.querySelectorAll('#segKey button').forEach(b => b.classList.toggle('on', b.dataset.v === settings.key));
 }
