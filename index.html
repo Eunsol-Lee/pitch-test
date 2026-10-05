@@ -61,6 +61,14 @@
   input[type=range] { width:100%; }
   .adj { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .adj button { padding:10px 4px; font-size:15px; }
+  .mini { position:relative; height:74px; margin:14px 0 4px; }
+  .mini div { position:absolute; top:0; box-sizing:border-box; }
+  .mini .mw { height:74px; background:#fff; border:1px solid #bbb; border-radius:0 0 4px 4px; }
+  .mini .mb { height:44px; background:#222; z-index:2; border-radius:0 0 3px 3px; }
+  .mini .hit { background:var(--accent) !important; border-color:var(--accent) !important; }
+  .mini .mw span { position:absolute; bottom:3px; left:0; right:0; text-align:center; font-size:9px; color:#999; }
+  .trans { text-align:center; font-size:14px; color:var(--sub); min-height:20px; }
+  .trans b { color:var(--ink); }
   .instGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:10px; }
   .instGrid button { text-align:left; padding:10px 12px; }
   .instGrid button b { display:block; font-size:16px; }
@@ -88,6 +96,9 @@
     <div class="instGrid" id="instGrid"></div>
     <div class="row" style="margin-top:14px"><b>① 문제 수</b>
       <span class="seg row" id="segCount"><button data-v="24">24문제</button><button data-v="36" class="on">36문제</button></span></div>
+    <div style="margin-top:16px"><b>답하는 이름 기준</b>
+      <div class="sub">클라리넷처럼 악보 이름과 실제 소리가 다른 악기를 한다면, 악보 이름으로도 연습해 보세요. 예: 실제 소리 <b>도</b> = B♭ 악보 <b>레</b> = A 악보 <b>메(미♭)</b></div>
+      <span class="seg row" id="segKey" style="margin-top:8px"><button data-v="C">실제 소리 (C)</button><button data-v="Bb">B♭ 악기 악보</button><button data-v="A">A 악기 악보</button></span></div>
   </div>
   <button class="mode" id="btnStart"><b>① 음 이름 맞히기</b><span>음을 듣고 도레미로 답해요. 답하면 바로 정답이 나와요. 24문제 약 4분 · 36문제 약 6분.</span></button>
   <button class="mode" id="btnTune"><b>② 음 높이 정확히 맞추기</b><span>틀어진 음을 온음·반음·미세 조절로 정확한 높이에 맞춰요. 12음 전부(흰 건반 + 검은 건반), 약 5분.</span></button>
@@ -100,6 +111,7 @@
   <div class="progress"><div id="qBar"></div></div>
   <div class="inst" id="qInst"></div>
   <div class="status" id="qStatus">준비…</div>
+  <div class="trans" id="qTrans"></div>
   <div class="kbd" id="kbd"></div>
   <div class="row" style="justify-content:center">
     <button id="btnReplay">🔁 다시 듣기 (<span id="replayLeft">2</span>)</button>
@@ -140,6 +152,9 @@
   <div class="card" style="text-align:center">
     <div class="inst" id="tInst"></div>
     <div style="font-size:40px; font-weight:700; margin:4px 0" id="tTarget">라</div>
+    <div class="trans" id="tTrans"></div>
+    <div class="mini" id="tMini"></div>
+    <div class="sub" id="tMiniLbl" style="margin-bottom:6px"></div>
     <div id="tAdjust">
       <div class="sub">이 음이 정확히 위 이름으로 들릴 때까지 조절하세요</div>
       <input type="range" id="tSlider" min="-700" max="700" step="1" value="0" style="margin:18px 0 10px">
@@ -216,12 +231,32 @@ const instLabel = k => `${INST[k].icon} ${INST[k].name}`;
 const offsetOf = (ans, pc) => { let d = ((ans - pc) % 12 + 12) % 12; return d > 6 ? d - 12 : d; };
 const sgn = x => (x > 0 ? '+' : '') + x;
 
-let settings = { count: 36, inst: localStorage.getItem('pitchInst') || 'piano' };
+let settings = { count: 36, inst: localStorage.getItem('pitchInst') || 'piano', key: localStorage.getItem('pitchKey') || 'C' };
+// 이조 악기: 악보 이름 = 실제 소리 + shift 반음 (B♭ 악기 +2, A 악기 +3)
+const KEYS = { C: { label: '실제 소리', shift: 0 }, Bb: { label: 'B♭ 악보', shift: 2 }, A: { label: 'A 악보', shift: 3 } };
+const wpc = (midi, key = settings.key) => (midi + KEYS[key].shift) % 12;
+const transLine = midi => Object.entries(KEYS).map(([k, v]) => {
+  const t = `${v.label} ${NAMES[wpc(midi, k)]}`; return k === settings.key ? `<b>${t}</b>` : t;
+}).join(' · ');
+const asked = midi => settings.key === 'C' ? noteLabel(midi) : `${NAMES[wpc(midi)]} <small class="sub">(실제 ${NAMES[midi % 12]})</small>`;
+const keyName = () => settings.key === 'C' ? '' : ` · ${KEYS[settings.key].label}`;
+const sameRun = r => r.inst === settings.inst && (r.key || 'C') === settings.key;
+// 피아노 건반(도3~시5)에 실제 소리 위치 표시
+function miniKbd(el, midi) {
+  const W = 100 / 21; let wi = 0, html = '';
+  for (let m = 48; m <= 83; m++) {
+    const pc = m % 12, hit = m === midi ? ' hit' : '';
+    if ([1, 3, 6, 8, 10].includes(pc)) html += `<div class="mb${hit}" style="left:${(wi - .3) * W}%; width:${.6 * W}%"></div>`;
+    else { html += `<div class="mw${hit}" style="left:${wi * W}%; width:${W}%">${pc === 0 ? `<span>도${m / 12 - 1}</span>` : ''}</div>`; wi++; }
+  }
+  el.innerHTML = html;
+}
 document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   e.stopPropagation();
   seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  if (seg.id === 'segCount') settings.count = +b.dataset.v; else settings.inst = b.dataset.v;
+  if (seg.id === 'segCount') settings.count = +b.dataset.v;
+  if (seg.id === 'segKey') { settings.key = b.dataset.v; localStorage.setItem('pitchKey', settings.key); renderInstGrid(); }
 }));
 
 // ---------- 소리 ----------
@@ -319,7 +354,7 @@ function nextQuestion() {
   $('qBar').style.width = `${qi / questions.length * 100}%`;
   $('qTimer').textContent = '';
   $('qInst').textContent = instLabel(q.inst);
-  setKeys(false); $('qStatus').className = 'status'; $('qStatus').textContent = '섞는 중… 🎲';
+  setKeys(false); $('qStatus').className = 'status'; $('qStatus').textContent = '섞는 중… 🎲'; $('qTrans').innerHTML = '';
   $('kbd').querySelectorAll('button').forEach(b => b.classList.remove('right', 'wrong'));
   const c = ac(), t = playMask(c.currentTime + .1);
   playNote(q.inst, q.midi, 0, t);
@@ -332,7 +367,7 @@ function nextQuestion() {
 }
 function answer(pc) {
   clearInterval(timerId); setKeys(false); $('btnReplay').disabled = true;
-  const q = questions[qi], real = q.midi % 12;
+  const q = questions[qi], real = wpc(q.midi);
   answers.push({ ...q, ans: pc, sec: (performance.now() - startedAt) / 1000, replays: 2 - replaysLeft });
   // 바로 정답 보여주기
   const d = offsetOf(pc, real), st = $('qStatus');
@@ -343,6 +378,7 @@ function answer(pc) {
     st.className = 'status ng';
     st.textContent = `✗ ${NAMES[pc]} → 정답은 ${NAMES[real]} (${Math.abs(d)}반음 ${d > 0 ? '높게' : '낮게'} 답함)`;
   }
+  $('qTrans').innerHTML = transLine(q.midi);
   renderLog();
   // 틀리면 방금 그 음을 정답 이름과 함께 한 번 더 들려줌
   if (d !== 0) playNote(q.inst, q.midi, 0, ac().currentTime + .25, 1.6);
@@ -350,11 +386,11 @@ function answer(pc) {
 }
 function renderLog() {
   if (!answers.length) { $('liveScore').textContent = ''; $('log').innerHTML = '<span class="sub">첫 문제를 풀면 여기에 쌓여요</span>'; return; }
-  const ok = answers.filter(a => a.ans === a.midi % 12).length;
+  const ok = answers.filter(a => a.ans === wpc(a.midi)).length;
   $('liveScore').textContent = `${answers.length}문제 중 ${ok}개 정답 (${Math.round(ok / answers.length * 100)}%)`;
   $('log').innerHTML = answers.map((a, i) => {
-    const d = offsetOf(a.ans, a.midi % 12);
-    return `<div><span>#${i + 1} ${INST[a.inst].icon} 나온 음 <b>${NAMES[a.midi % 12]}</b> · 내 답 <b>${NAMES[a.ans]}</b></span>
+    const d = offsetOf(a.ans, wpc(a.midi));
+    return `<div><span>#${i + 1} ${INST[a.inst].icon} 나온 음 <b>${NAMES[wpc(a.midi)]}</b> · 내 답 <b>${NAMES[a.ans]}</b></span>
       <span class="${d === 0 ? 'good' : 'off'}">${d === 0 ? '✓' : sgn(d)} · ${a.sec.toFixed(1)}초</span></div>`;
   }).reverse().join('');
 }
@@ -368,7 +404,7 @@ $('btnQuit').onclick = () => { clearInterval(timerId); setKeys(false); finishQui
 function pastTable(key, now, cols) {
   const past = JSON.parse(localStorage.getItem(key) || '[]');
   localStorage.setItem(key, JSON.stringify([...past, now].slice(-200)));
-  const same = past.filter(r => r.inst === now.inst);
+  const same = past.filter(sameRun);
   if (!same.length) return '';
   const instName = k => k === 'mix' ? '섞어서' : INST[k]?.name || '';
   return `<tr><th>날짜</th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr>` +
@@ -382,7 +418,7 @@ function finishQuiz() {
   show('result');
   const n = answers.length;
   if (!n) { $('verdict').textContent = '답한 문제가 없어요.'; return; }
-  const offs = answers.map(a => offsetOf(a.ans, a.midi % 12));
+  const offs = answers.map(a => offsetOf(a.ans, wpc(a.midi)));
   const exact = offs.filter(d => d === 0).length, near = offs.filter(d => Math.abs(d) <= 1).length;
   const avgT = answers.reduce((s, a) => s + a.sec, 0) / n;
   const pct = x => Math.round(x / n * 100) + '%';
@@ -412,6 +448,8 @@ function finishQuiz() {
   else v = `🎼 <b>기준음 없이 이름 맞히기는 어려운 편이에요.</b> 대부분의 사람이 이래요. 앞 음과 비교해서 듣는 상대음감 위주라는 뜻이고, 합주에는 오히려 이쪽이 더 중요해요.`;
   if (!shifted && n - exact >= 3 && hist[1] >= (n - exact) / 2 && hist[1] >= 2 * hist[-1])
     v += `<br>💡 틀린 답은 주로 <b>반음 높게(+1)</b> 나왔어요. 실제 음이 조금 높게 들리는 쪽으로 기울어 있어요.`;
+  const sh = KEYS[settings.key].shift;
+  if (sh && top === -sh && hist[top] >= 3) v += `<br>💡 틀린 답 중 −${sh}이 ${hist[top]}번이에요. ${KEYS[settings.key].label}가 아니라 실제 소리 이름으로 답했을 때 생기는 차이예요.`;
   if (avgT > 4) v += `<br>⏱ 평균 ${avgT.toFixed(1)}초가 걸렸어요. 절대음감은 보통 1~2초 안에 바로 떠올라서, 오래 걸렸다면 계산해서 맞힌 것일 수 있어요.`;
   $('verdict').innerHTML = v;
 
@@ -426,7 +464,7 @@ function finishQuiz() {
   }).join('');
 
   // 지난 기록 (이 기기에만 저장)
-  const now = { at: Date.now(), n, exact, near, avgT, top: hist[top] ? top : 0, inst: settings.inst };
+  const now = { at: Date.now(), n, exact, near, avgT, top: hist[top] ? top : 0, inst: settings.inst, key: settings.key };
   const pt = pastTable('pitchHistory', now, [
     ['정답률', r => Math.round(r.exact / r.n * 100) + '%'], ['반음 이내', r => Math.round(r.near / r.n * 100) + '%'],
     ['자주 밀린 쪽', r => r.top ? sgn(r.top) : '-'], ['평균 시간', r => r.avgT.toFixed(1) + '초']]);
@@ -434,14 +472,14 @@ function finishQuiz() {
 
   $('tbl').innerHTML = '<tr><th>#</th><th>악기</th><th>나온 음</th><th>내 답</th><th>차이</th><th>시간</th></tr>' + answers.map((a, i) => {
     const d = offs[i];
-    return `<tr><td>${i + 1}</td><td>${INST[a.inst].icon}</td><td>${noteLabel(a.midi)}</td><td>${NAMES[a.ans]}</td>
+    return `<tr><td>${i + 1}</td><td>${INST[a.inst].icon}</td><td>${asked(a.midi)}</td><td>${NAMES[a.ans]}</td>
       <td class="${d === 0 ? 'good' : 'off'}">${d === 0 ? '✓' : sgn(d)}</td><td>${a.sec.toFixed(1)}초${a.replays ? ' 🔁' + a.replays : ''}</td></tr>`;
   }).join('');
 
-  summary1 = `[음 이름 맞히기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}\n` +
+  summary1 = `[음 이름 맞히기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}${keyName()}\n` +
     `정확 ${exact}/${n} (${pct(exact)}), 반음 이내 ${pct(near)}, 평균 ${avgT.toFixed(1)}초\n` +
     `어긋남 분포: ${Object.entries(hist).sort((a, b) => a[0] - b[0]).filter(([, c]) => c).map(([d, c]) => `${sgn(+d)}:${c}`).join(' ')}\n` +
-    `문제별: ${answers.map(a => `${INST[a.inst].name} ${noteName(a.midi)}→${NAMES[a.ans]}(${a.sec.toFixed(1)}s)`).join(', ')}`;
+    `문제별: ${answers.map(a => `${INST[a.inst].name} ${NAMES[wpc(a.midi)]}→${NAMES[a.ans]}(${a.sec.toFixed(1)}s)`).join(', ')}`;
 }
 
 // ---------- ② 음 높이 맞추기 ----------
@@ -467,7 +505,10 @@ function nextTune() {
   $('tNum').textContent = `${ti + 1} / ${tTrials.length}`;
   $('tBar').style.width = `${ti / tTrials.length * 100}%`;
   $('tInst').textContent = instLabel(t.inst);
-  $('tTarget').textContent = NAMES[t.midi % 12];
+  $('tTarget').textContent = NAMES[wpc(t.midi)];
+  $('tTrans').innerHTML = transLine(t.midi);
+  miniKbd($('tMini'), t.midi);
+  $('tMiniLbl').textContent = `🎹 피아노에서 이 음: ${LETTERS[t.midi % 12].split('/').map(l => l + (Math.floor(t.midi / 12) - 1)).join(' / ')}`;
   $('tAdjust').classList.remove('hidden'); $('tReveal').classList.add('hidden');
   hidden = (Math.random() < .5 ? -1 : 1) * (50 + rand(300)); // 정확한 음에서 ±50~350센트 틀어진 상태로 시작
   $('tSlider').value = rand(201) - 100;
@@ -488,7 +529,7 @@ $('tDone').onclick = () => {
   $('tAdjust').classList.add('hidden'); $('tReveal').classList.remove('hidden');
   const st = $('tStatus');
   st.className = 'status ' + (Math.abs(c) < 30 ? 'ok' : 'ng');
-  st.innerHTML = `${errText(c)}<br><span class="sub">정확한 ${NAMES[tTrials[ti].midi % 12]}보다 ${sgn(Math.round(c))}센트</span>`;
+  st.innerHTML = `${errText(c)}<br><span class="sub">정확한 ${NAMES[wpc(tTrials[ti].midi)]}보다 ${sgn(Math.round(c))}센트</span>`;
   renderTuneLog();
 };
 $('tMine').onclick = () => playTune(undefined, tResults[tResults.length - 1].cents);
@@ -499,7 +540,7 @@ function renderTuneLog() {
   if (!tResults.length) { $('tLive').textContent = ''; $('tLog').innerHTML = '<span class="sub">첫 음을 맞추면 여기에 쌓여요</span>'; return; }
   const m = tResults.reduce((s, r) => s + r.cents, 0) / tResults.length;
   $('tLive').textContent = `평균 ${sgn(Math.round(m))}센트`;
-  $('tLog').innerHTML = tResults.map((r, i) => `<div><span>#${i + 1} ${INST[r.inst].icon} <b>${NAMES[r.midi % 12]}</b></span>
+  $('tLog').innerHTML = tResults.map((r, i) => `<div><span>#${i + 1} ${INST[r.inst].icon} <b>${NAMES[wpc(r.midi)]}</b></span>
     <span class="${Math.abs(r.cents) < 30 ? 'good' : 'off'}">${sgn(Math.round(r.cents))}센트 · ${errText(r.cents)}</span></div>`).reverse().join('');
 }
 
@@ -529,18 +570,18 @@ function finishTune() {
   $('tInstTbl').innerHTML = '<tr><th>악기</th><th>평균</th><th>횟수</th></tr>' + Object.entries(byInst).map(([k, a]) =>
     `<tr><td>${instLabel(k)}</td><td>${sgn(Math.round(a.reduce((s, x) => s + x, 0) / a.length))}센트</td><td>${a.length}</td></tr>`).join('');
 
-  const now = { at: Date.now(), n, mean, sd, inside, inst: settings.inst };
+  const now = { at: Date.now(), n, mean, sd, inside, inst: settings.inst, key: settings.key };
   const pt = pastTable('tuneHistory', now, [
     ['평균', r => sgn(Math.round(r.mean)) + '센트'], ['들쭉날쭉', r => '±' + Math.round(r.sd)], ['±30 안', r => `${r.inside}/${r.n}`]]);
   $('tPastWrap').classList.toggle('hidden', !pt); $('tPastTbl').innerHTML = pt;
 
   $('tTbl').innerHTML = '<tr><th>#</th><th>악기</th><th>음</th><th>맞춘 높이</th><th>뜻</th></tr>' + tResults.map((r, i) =>
-    `<tr><td>${i + 1}</td><td>${INST[r.inst].icon}</td><td>${noteLabel(r.midi)}</td>
+    `<tr><td>${i + 1}</td><td>${INST[r.inst].icon}</td><td>${asked(r.midi)}</td>
      <td class="${Math.abs(r.cents) < 30 ? 'good' : 'off'}">${sgn(Math.round(r.cents))}센트</td><td>${errText(r.cents)}</td></tr>`).join('');
 
-  summary2 = `[음 높이 맞추기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}\n` +
+  summary2 = `[음 높이 맞추기] ${new Date().toLocaleString('ko-KR')} / 악기 ${settings.inst === 'mix' ? '섞어서' : INST[settings.inst].name}${keyName()}\n` +
     `평균 ${sgn(Math.round(mean))}센트, 들쭉날쭉 ±${Math.round(sd)}센트, ±30센트 안 ${inside}/${n}\n` +
-    `음별: ${tResults.map(r => `${INST[r.inst].name} ${noteName(r.midi)} ${sgn(Math.round(r.cents))}`).join(', ')}`;
+    `음별: ${tResults.map(r => `${INST[r.inst].name} ${NAMES[wpc(r.midi)]} ${sgn(Math.round(r.cents))}`).join(', ')}`;
 }
 
 // ---------- 버튼 ----------
@@ -552,11 +593,12 @@ async function copy(text) {
 function renderInstGrid() {
   const h1 = JSON.parse(localStorage.getItem('pitchHistory') || '[]'), h2 = JSON.parse(localStorage.getItem('tuneHistory') || '[]');
   $('instGrid').innerHTML = [...MIX, 'sine', 'mix'].map(k => {
-    const a = h1.filter(r => r.inst === k), b = h2.filter(r => r.inst === k), la = a[a.length - 1], lb = b[b.length - 1];
+    const a = h1.filter(r => r.inst === k && (r.key || 'C') === settings.key), b = h2.filter(r => r.inst === k && (r.key || 'C') === settings.key), la = a[a.length - 1], lb = b[b.length - 1];
     const lines = [la ? `① 최근 ${Math.round(la.exact / la.n * 100)}% (${a.length}회)` : '', lb ? `② 최근 ${sgn(Math.round(lb.mean))}센트 (${b.length}회)` : ''].filter(Boolean);
     return `<button data-v="${k}" class="${k === settings.inst ? 'on' : ''}"><b>${k === 'mix' ? '🎲 섞어서' : instLabel(k)}</b><small>${lines.join('<br>') || '아직 기록 없음'}</small></button>`;
   }).join('');
-  document.querySelectorAll('.pastH').forEach(h => h.textContent = `${settings.inst === 'mix' ? '🎲 섞어서' : instLabel(settings.inst)} 지난 기록`);
+  document.querySelectorAll('.pastH').forEach(h => h.textContent = `${settings.inst === 'mix' ? '🎲 섞어서' : instLabel(settings.inst)}${keyName()} 지난 기록`);
+  document.querySelectorAll('#segKey button').forEach(b => b.classList.toggle('on', b.dataset.v === settings.key));
 }
 $('instGrid').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
